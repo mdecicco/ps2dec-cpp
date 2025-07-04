@@ -1,0 +1,37 @@
+#pragma once
+#include <decomp/types.h>
+#include <decomp/utils/string.h>
+#include <unordered_map>
+
+namespace decomp {
+    struct Argument {
+        public:
+            String name;
+            String value;
+    };
+
+    class Arguments {
+        public:
+            Arguments();
+            Arguments(u32 argc, const char** argv);
+            ~Arguments();
+
+            bool isEmpty() const;
+            void set(const String& name);
+            void set(const String& name, const String& value);
+            void remove(const String& name);
+            bool exists(const String& name) const;
+            const String& getArg(const String& name) const;
+            const String& getPath() const;
+            Array<Argument> getAll() const;
+
+            u32 getRawArgCount() const;
+            const char** getRawArgs() const;
+
+        protected:
+            std::unordered_map<String, String> m_args;
+            String m_path;
+            u32 m_argc;
+            const char** m_argv;
+    };
+};

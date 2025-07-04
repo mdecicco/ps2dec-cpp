@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+    <Type Name="decomp::Array&lt;*&gt;">
+        <DisplayString>{{ size = {m_size}, capacity = {m_capacity} }}</DisplayString>
+        <Expand>
+            <IndexListItems>
+                <Size>m_size</Size>
+                <ValueNode>m_data[$i]</ValueNode>
+            </IndexListItems>
+        </Expand>
+    </Type>
+    <Type Name="decomp::ArrayView&lt;*&gt;">
+        <DisplayString>{{ size = {(m_offset >= m_target->m_size) ? 0 : ((m_offset + m_size) >= m_target->m_size ? m_target->m_size - m_offset : m_size)}, offset = {m_offset} }}</DisplayString>
+        <Expand>
+            <IndexListItems>
+                <Size>(m_offset >= m_target->m_size) ? 0 : ((m_offset + m_size) >= m_target->m_size ? m_target->m_size - m_offset : m_size)</Size>
+                <ValueNode>(m_target->m_data + m_offset)[$i]</ValueNode>
+            </IndexListItems>
+        </Expand>
+    </Type>
+    <Type Name="decomp::String">
+        <DisplayString Condition="m_readOnly">{m_data,[m_len]}</DisplayString>
+        <DisplayString Condition="!m_readOnly">{m_data,s}</DisplayString>
+    </Type>
+</AutoVisualizer>
