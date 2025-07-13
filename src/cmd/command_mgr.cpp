@@ -1,6 +1,7 @@
 #include <decomp/cmd/command_mgr.h>
 
 #include <decomp/cmd/cmd_shutdown.h>
+#include <decomp/cmd/command_listener.h>
 
 #include <decomp/utils/array.hpp>
 #include <decomp/utils/buffer.hpp>
@@ -8,12 +9,16 @@
 
 namespace decomp {
     namespace cmd {
-        CommandMgr::CommandMgr(Application* app) {
+        CommandMgr::CommandMgr(Application* app) : IWithLogging("CommandMgr") {
             m_app = app;
         }
 
         CommandMgr::~CommandMgr() {
-            clearStacks();
+            shutdown();
+        }
+
+        void CommandMgr::shutdown() {
+            reset();
         }
 
         void CommandMgr::undo() {
@@ -22,12 +27,12 @@ namespace decomp {
             }
 
             ICommand* command = m_undoStack.pop();
+            debug("Undoing command: %s", command->getName());
+
             command->rollback();
 
             if (command->getFlags() & CommandFlags::Redoable) {
                 m_redoStack.push(command);
-            } else {
-                delete command;
             }
         }
 
@@ -37,16 +42,18 @@ namespace decomp {
             }
 
             ICommand* command = m_redoStack.pop();
+            debug("Redoing command: %s", command->getName());
+
             command->commit();
 
             if (command->getFlags() & CommandFlags::Undoable) {
                 m_undoStack.push(command);
-            } else {
-                delete command;
             }
         }
 
-        void CommandMgr::serialize(Buffer& buffer) const {
+        void CommandMgr::serializeState(Buffer& buffer) {
+            debug("Serializing command state (undoStack: %d, redoStack: %d)", m_undoStack.size(), m_redoStack.size());
+
             buffer.write<u32>(m_undoStack.size());
             buffer.write<u32>(m_redoStack.size());
 
@@ -59,8 +66,10 @@ namespace decomp {
             }
         }
 
-        void CommandMgr::deserialize(Buffer& buffer) {
-            clearStacks();
+        void CommandMgr::deserializeState(Buffer& buffer) {
+            debug("Deserializing command state");
+
+            reset();
 
             u32 undoStackSize;
             u32 redoStackSize;
@@ -68,21 +77,44 @@ namespace decomp {
             buffer.read(undoStackSize);
             buffer.read(redoStackSize);
 
+            debug("undoStack: %d, redoStack: %d", undoStackSize, redoStackSize);
+
             for (u32 i = 0; i < undoStackSize; i++) {
-                ICommand* command = ICommand::deserialize(buffer, m_app);
+                ICommand* command = ICommand::deserialize(buffer, true, m_app);
                 m_undoStack.push(command);
+                m_submittedCommands.push(command);
             }
 
             for (u32 i = 0; i < redoStackSize; i++) {
-                ICommand* command = ICommand::deserialize(buffer, m_app);
+                ICommand* command = ICommand::deserialize(buffer, true, m_app);
                 m_redoStack.push(command);
+                m_submittedCommands.push(command);
             }
         }
 
         void CommandMgr::submit(ICommand* command) {
-            if ((command->getFlags() & CommandFlags::ForServer) == 0) {
+            debug("Received '%s' command", command->getName());
+
+            RegisteredCommand* registeredCommand = nullptr;
+            for (RegisteredCommand& cmd : m_registeredCommands) {
+                if (strcmp(cmd.name, command->getName()) == 0) {
+                    registeredCommand = &cmd;
+                    break;
+                }
+            }
+
+            if (registeredCommand == nullptr) {
+                String msg =
+                    String::Format("CommandMgr::submit() - '%s' command is not registered", command->getName());
+
+                delete command;
+
+                throw InvalidActionException(msg.c_str());
+            }
+
+            if ((registeredCommand->flags & CommandFlags::ForServer) == 0) {
                 String msg = String::Format(
-                    "CommandMgr::submit() - '%s' command is not intended for server", command->getTypeName()
+                    "CommandMgr::submit() - '%s' command is invalid in this context", command->getName()
                 );
 
                 delete command;
@@ -90,33 +122,43 @@ namespace decomp {
                 throw InvalidActionException(msg.c_str());
             }
 
+            command->m_app   = m_app;
+            command->m_flags = registeredCommand->flags;
+
             command->commit();
 
             if (command->getFlags() & CommandFlags::Undoable) {
                 m_undoStack.push(command);
+                m_redoStack.clear();
+            }
 
-                for (ICommand* cmd : m_redoStack) {
-                    delete cmd;
+            m_submittedCommands.push(command);
+        }
+
+        void CommandMgr::unsubscribeFromAll(ICommandListener* listener) {
+            for (RegisteredCommand& cmd : m_registeredCommands) {
+                i64 index = cmd.listeners.findIndex([listener](ICommandListener* l) { return l == listener; });
+                if (index == -1) {
+                    continue;
                 }
 
-                m_redoStack.clear();
-            } else {
-                delete command;
+                cmd.listeners.remove(index);
+                listener->m_listeningTo.erase(cmd.name);
             }
         }
 
-        void CommandMgr::submitShutdown() {
-            submit(new CmdShutdown(m_app));
+        const Array<CommandMgr::RegisteredCommand>& CommandMgr::getRegisteredCommands() const {
+            return m_registeredCommands;
         }
 
-        void CommandMgr::clearStacks() {
-            for (ICommand* command : m_undoStack) {
+        void CommandMgr::reset() {
+            for (ICommand* command : m_submittedCommands) {
                 delete command;
             }
 
-            for (ICommand* command : m_redoStack) {
-                delete command;
-            }
+            m_submittedCommands.clear();
+            m_undoStack.clear();
+            m_redoStack.clear();
         }
     }
 }

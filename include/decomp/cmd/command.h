@@ -1,11 +1,17 @@
 #pragma once
 #include <decomp/types.h>
 
+#include <decomp/utils/array.h>
+
 namespace decomp {
     class Buffer;
     class Application;
+    class Socket;
 
     namespace cmd {
+        class Response;
+        class ICommandListener;
+
         enum CommandFlags : u8 {
             None      = 0b00000000,
             Undoable  = 0b00000001,
@@ -14,54 +20,57 @@ namespace decomp {
         };
 
         enum class CommandState : u8 {
-            Pending,
-            Committed,
-            RolledBack,
-            CommitFailed,
-            RollbackFailed
-        };
-
-        enum class CommandType : u16 {
-            Shutdown
+            Pending        = 0,
+            Committing     = 1,
+            Committed      = 2,
+            RollingBack    = 3,
+            RolledBack     = 4,
+            CommitFailed   = 5,
+            RollbackFailed = 6
         };
 
         class ICommand {
             public:
-                ICommand(CommandType type, u8 flags, Application* app);
-                virtual ~ICommand() = default;
+                ICommand(const char* name);
+                virtual ~ICommand();
+
+                void serialize(Buffer& buffer) const;
+                void resolveCommit(ICommandListener* listener);
+                void rejectCommit(ICommandListener* listener);
+                void resolveRollback(ICommandListener* listener);
+                void rejectRollback(ICommandListener* listener);
+
+                const char* getName() const;
+                CommandState getState() const;
+                CommandFlags getFlags() const;
+                bool isResolved() const;
+
+                static ICommand* deserialize(Buffer& buffer, bool withState, Application* app);
+
+            protected:
+                friend class CommandMgr;
+                friend class Application;
 
                 void commit();
                 void rollback();
-                void serialize(Buffer& buffer) const;
+                void initializeResponse(u32 commandId, Socket* socket);
+                void sendResponse();
 
-                CommandType getType() const;
-                CommandState getState() const;
-                CommandFlags getFlags() const;
-
-                virtual const char* getTypeName() const = 0;
-
-                static ICommand* deserialize(Buffer& buffer, Application* app);
-
-            protected:
-                virtual void doCommit();
-                virtual void doRollback();
+                virtual void generateResponse();
                 virtual void doSerialize(Buffer& buffer) const;
                 virtual void doDeserialize(Buffer& buffer);
+                virtual void dispatchCommit(ICommandListener* listener)         = 0;
+                virtual void dispatchCommitFailed(ICommandListener* listener)   = 0;
+                virtual void dispatchRollback(ICommandListener* listener)       = 0;
+                virtual void dispatchRollbackFailed(ICommandListener* listener) = 0;
 
                 Application* m_app;
-                CommandType m_type;
+                const char* m_name;
+                Response* m_response;
                 CommandState m_state;
                 CommandFlags m_flags;
-        };
-
-        class IServerCommand : public ICommand {
-            public:
-                IServerCommand(CommandType type, u8 flags, Application* app);
-        };
-
-        class IClientCommand : public ICommand {
-            public:
-                IClientCommand(CommandType type, u8 flags, Application* app);
+                Array<ICommandListener*> m_pendingListeners;
+                Array<ICommandListener*> m_resolvedListeners;
         };
     }
 }

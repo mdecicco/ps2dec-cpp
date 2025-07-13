@@ -1,6 +1,7 @@
 #pragma once
 #include <decomp/app/options.h>
 #include <decomp/types.h>
+#include <decomp/utils/logging.h>
 
 #include <thread>
 
@@ -8,8 +9,9 @@ namespace decomp {
     class Buffer;
     class Socket_Impl;
     class ISocketListener;
+    class SocketErrorHandler;
 
-    class Socket {
+    class Socket : public IWithLogging {
         public:
             Socket(const ApplicationOptions& options);
             ~Socket();
@@ -35,5 +37,6 @@ namespace decomp {
             bool m_shouldStop;
             bool m_isProcessingEvents;
             ISocketListener* m_listener;
+            SocketErrorHandler* m_errorHandler;
     };
 }

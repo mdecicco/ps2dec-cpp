@@ -55,16 +55,66 @@ namespace decomp {
             bool hasConnection;
     };
 
+    class SocketErrorStreamBuf : public std::streambuf {
+        public:
+            SocketErrorStreamBuf(Socket* socket) {
+                m_socket = socket;
+            }
+
+            int overflow(int c) override {
+                if (c == std::streambuf::traits_type::eof() || c == '\n' || c == '\r') {
+                    return c;
+                }
+
+                m_buffer += char(c);
+                return c;
+            }
+
+            std::streamsize xsputn(const char* s, std::streamsize n) override {
+                for (i32 i = 0; i < n; i++) {
+                    if (s[i] == '\n' || s[i] == '\r') {
+                        continue;
+                    }
+
+                    m_buffer += s[i];
+                }
+
+                return n;
+            }
+
+            int sync() override {
+                i32 len = m_buffer.size();
+                if (len > 0) {
+                    m_socket->error("%s", m_buffer.c_str());
+                }
+
+                return len;
+            }
+
+        private:
+            Socket* m_socket;
+            String m_buffer;
+    };
+
+    class SocketErrorHandler : public std::ostream {
+        public:
+            SocketErrorHandler(Socket* socket) : std::ostream(&m_streamBuf), m_streamBuf(socket) {}
+
+        private:
+            SocketErrorStreamBuf m_streamBuf;
+    };
+
     //////////////////////////////////////////////////////////////////////////
     // Socket
     //////////////////////////////////////////////////////////////////////////
 
-    Socket::Socket(const ApplicationOptions& options) {
+    Socket::Socket(const ApplicationOptions& options) : IWithLogging("Socket") {
         m_options            = &options;
         m_impl               = nullptr;
         m_shouldStop         = false;
         m_isProcessingEvents = false;
         m_listener           = nullptr;
+        m_errorHandler       = new SocketErrorHandler(this);
     }
 
     Socket::~Socket() {
@@ -84,12 +134,12 @@ namespace decomp {
         }
 
         m_impl->server.set_access_channels(websocketpp::log::alevel::none);
+        m_impl->server.set_error_channels(websocketpp::log::elevel::all);
+        m_impl->server.get_elog().set_ostream(m_errorHandler);
 
-        m_impl->server.set_message_handler(
-            websocketpp::lib::bind(
-                &Socket_Impl::onMessage, m_impl, websocketpp::lib::placeholders::_1, websocketpp::lib::placeholders::_2
-            )
-        );
+        m_impl->server.set_message_handler(websocketpp::lib::bind(
+            &Socket_Impl::onMessage, m_impl, websocketpp::lib::placeholders::_1, websocketpp::lib::placeholders::_2
+        ));
         m_impl->server.set_open_handler(
             websocketpp::lib::bind(&Socket_Impl::onOpen, m_impl, websocketpp::lib::placeholders::_1)
         );
@@ -102,7 +152,7 @@ namespace decomp {
         m_impl->server.start_accept();
         m_startedByThread = std::this_thread::get_id();
 
-        std::cout << "WebSocket server initialized on port " << m_options->websocketPort << std::endl;
+        log("WebSocket server initialized on port %d", m_options->websocketPort);
     }
 
     void Socket::close() {
@@ -118,7 +168,6 @@ namespace decomp {
 
         if (isOpen()) {
             if (m_impl->hasConnection) {
-                std::cout << "Closing connection" << std::endl;
                 m_impl->server.close(m_impl->connection, websocketpp::close::status::normal, "Socket closed");
             }
 
@@ -164,7 +213,7 @@ namespace decomp {
         }
 
         m_isProcessingEvents = true;
-        m_impl->server.run_one();
+        m_impl->server.poll_one();
         m_isProcessingEvents = false;
     }
 

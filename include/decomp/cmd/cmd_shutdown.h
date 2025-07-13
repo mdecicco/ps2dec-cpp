@@ -3,17 +3,22 @@
 
 namespace decomp {
     namespace cmd {
-        class CmdShutdown : public IServerCommand {
+        class CmdShutdown : public ICommand {
             public:
-                CmdShutdown(Application* app);
+                static constexpr const char* name   = "shutdown";
+                static constexpr CommandFlags flags = CommandFlags::ForServer;
+                static ICommand* deserialize(Buffer& buffer);
 
-                static CmdShutdown* fromBuffer(
-                    Buffer& buffer, CommandState state, CommandFlags flags, Application* app
-                );
+                static CmdShutdown* create();
 
             protected:
-                void doCommit() override;
-                const char* getTypeName() const override;
+                CmdShutdown();
+
+                void generateResponse() override;
+                void dispatchCommit(ICommandListener* listener) override;
+                void dispatchCommitFailed(ICommandListener* listener) override;
+                void dispatchRollback(ICommandListener* listener) override;
+                void dispatchRollbackFailed(ICommandListener* listener) override;
         };
     }
 }

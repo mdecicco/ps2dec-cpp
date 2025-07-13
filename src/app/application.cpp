@@ -1,7 +1,9 @@
 #include <decomp/app/application.h>
+#include <decomp/app/logger.h>
 
+#include <decomp/cmd/cmd_shutdown.h>
 #include <decomp/cmd/command.h>
-#include <decomp/cmd/command_mgr.h>
+#include <decomp/cmd/command_mgr.hpp>
 
 #include <decomp/utils/buffer.h>
 #include <decomp/utils/exceptions.h>
@@ -13,21 +15,42 @@
 #include <thread>
 
 namespace decomp {
-    Application::Application(const ApplicationOptions& options) {
-        m_options   = options;
-        m_isRunning = false;
-        m_socket    = new Socket(m_options);
+    Application::Application(const ApplicationOptions& options) : IWithLogging("Application") {
+        m_options           = options;
+        m_isRunning         = false;
+        m_shutdownRequested = false;
+        m_socket            = new Socket(m_options);
+        m_commandMgr        = new cmd::CommandMgr(this);
+        m_logger            = new AppLogger(this);
+
         m_socket->setListener(this);
-        m_commandMgr = new cmd::CommandMgr(this);
+        addNestedLogger(m_socket);
+        addNestedLogger(m_commandMgr);
+        subscribeLogListener(m_logger);
+        registerValidCommands();
+
+        m_commandMgr->subscribeCommandListener<cmd::CmdShutdown>(this);
     }
 
     Application::~Application() {
+        m_commandMgr->unsubscribeFromAll(this);
+        m_commandMgr->shutdown();
+
         delete m_socket;
         delete m_commandMgr;
+        delete m_logger;
     }
 
     const ApplicationOptions& Application::getOptions() const {
         return m_options;
+    }
+
+    Socket* Application::getSocket() const {
+        return m_socket;
+    }
+
+    cmd::CommandMgr* Application::getCommandMgr() const {
+        return m_commandMgr;
     }
 
     i32 Application::run() {
@@ -43,6 +66,15 @@ namespace decomp {
             while (m_socket->isOpen()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(250));
                 m_socket->processEvents();
+
+                if (m_shutdownRequested) {
+                    Duration msSinceShutdownRequested = Clock::now() - m_shutdownRequestedAt;
+
+                    if (msSinceShutdownRequested.count() > 1000.0f) {
+                        log("Shutting down");
+                        m_socket->close();
+                    }
+                }
             }
         } catch (const GenericException& e) {
             m_isRunning = false;
@@ -56,24 +88,32 @@ namespace decomp {
         return 0;
     }
 
-    void Application::shutdown() {
-        m_socket->close();
+    void Application::onCommandCommit(cmd::CmdShutdown* command) {
+        m_shutdownRequested   = true;
+        m_shutdownRequestedAt = std::chrono::steady_clock::now();
+        log("Shutdown requested");
+
+        command->resolveCommit(this);
     }
 
     void Application::onMessage(Buffer& buffer) {
         try {
-            cmd::ICommand* command = cmd::ICommand::deserialize(buffer, this);
+            u32 commandId;
+            buffer.read(commandId);
+
+            cmd::ICommand* command = cmd::ICommand::deserialize(buffer, false, this);
+            command->initializeResponse(commandId, m_socket);
             m_commandMgr->submit(command);
         } catch (const std::exception& e) {
-            std::cout << "Error: " << e.what() << std::endl;
+            error("Caught exception while deserializing command: %s", e.what());
         }
     }
 
     void Application::onConnectionEstablished() {
-        std::cout << "Connection established" << std::endl;
+        log("Connection established");
     }
 
     void Application::onConnectionClosed() {
-        std::cout << "Connection closed" << std::endl;
+        log("Connection closed");
     }
 }

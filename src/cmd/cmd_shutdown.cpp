@@ -1,21 +1,38 @@
 #include <decomp/cmd/cmd_shutdown.h>
+#include <decomp/cmd/response.h>
 
 #include <decomp/app/application.h>
 
 namespace decomp {
     namespace cmd {
-        CmdShutdown::CmdShutdown(Application* app) : IServerCommand(CommandType::Shutdown, CommandFlags::None, app) {}
+        CmdShutdown::CmdShutdown() : ICommand(CmdShutdown::name) {}
 
-        void CmdShutdown::doCommit() {
-            m_app->shutdown();
+        ICommand* CmdShutdown::deserialize(Buffer& buffer) {
+            return new CmdShutdown();
         }
 
-        const char* CmdShutdown::getTypeName() const {
-            return "cmdShutdown";
+        CmdShutdown* CmdShutdown::create() {
+            return new CmdShutdown();
         }
 
-        CmdShutdown* CmdShutdown::fromBuffer(Buffer& buffer, CommandState state, CommandFlags flags, Application* app) {
-            return new CmdShutdown(app);
+        void CmdShutdown::generateResponse() {
+            m_response->write(u8(1));
+        }
+
+        void CmdShutdown::dispatchCommit(ICommandListener* listener) {
+            listener->onCommandCommit(this);
+        }
+
+        void CmdShutdown::dispatchCommitFailed(ICommandListener* listener) {
+            listener->onCommandCommitFailed(this);
+        }
+
+        void CmdShutdown::dispatchRollback(ICommandListener* listener) {
+            listener->onCommandRollback(this);
+        }
+
+        void CmdShutdown::dispatchRollbackFailed(ICommandListener* listener) {
+            listener->onCommandRollbackFailed(this);
         }
     }
 }

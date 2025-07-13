@@ -2,17 +2,22 @@
 #include <decomp/types.h>
 
 #include <decomp/app/options.h>
-
+#include <decomp/cmd/command_listener.h>
+#include <decomp/utils/logging.h>
 #include <decomp/utils/socket_listener.h>
+
+#include <chrono>
 
 namespace decomp {
     class Socket;
+    class AppLogger;
 
     namespace cmd {
         class CommandMgr;
+        class CmdShutdown;
     }
 
-    class Application : private ISocketListener {
+    class Application : private ISocketListener, public IWithLogging, public cmd::ICommandListener {
         public:
             Application(const ApplicationOptions& options);
             ~Application() override;
@@ -22,16 +27,23 @@ namespace decomp {
             cmd::CommandMgr* getCommandMgr() const;
 
             i32 run();
-            void shutdown();
 
         protected:
+            using Clock    = std::chrono::steady_clock;
+            using Duration = std::chrono::duration<f32, std::milli>;
+
             ApplicationOptions m_options;
             bool m_isRunning;
+            bool m_shutdownRequested;
             Socket* m_socket;
             cmd::CommandMgr* m_commandMgr;
+            AppLogger* m_logger;
+            Clock::time_point m_shutdownRequestedAt;
 
+            void onCommandCommit(cmd::CmdShutdown* command) override;
             void onMessage(Buffer& buffer) override;
             void onConnectionEstablished() override;
             void onConnectionClosed() override;
+            void registerValidCommands();
     };
 }

@@ -1,3 +1,4 @@
+#pragma once
 #include <decomp/utils/buffer.h>
 
 namespace decomp {
