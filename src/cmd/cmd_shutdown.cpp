@@ -1,5 +1,5 @@
 #include <decomp/cmd/cmd_shutdown.h>
-#include <decomp/cmd/response.h>
+#include <decomp/comm/packets/cmd_response.h>
 
 #include <decomp/app/application.h>
 
@@ -16,7 +16,7 @@ namespace decomp {
         }
 
         void CmdShutdown::generateResponse() {
-            m_response->write(u8(1));
+            getResponse()->write(u8(1));
         }
 
         void CmdShutdown::dispatchCommit(ICommandListener* listener) {

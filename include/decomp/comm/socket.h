@@ -19,6 +19,7 @@ namespace decomp {
             void open();
             void close();
             bool isOpen() const;
+            bool hasConnection() const;
             void send(const Buffer& buffer);
             void send(const Buffer* buffer);
             void processEvents();

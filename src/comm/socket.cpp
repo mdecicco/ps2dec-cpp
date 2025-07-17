@@ -1,9 +1,9 @@
 #define ASIO_STANDALONE
 
+#include <decomp/comm/socket.h>
+#include <decomp/comm/socket_listener.h>
 #include <decomp/utils/buffer.h>
 #include <decomp/utils/exceptions.h>
-#include <decomp/utils/socket.h>
-#include <decomp/utils/socket_listener.h>
 
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
@@ -18,41 +18,46 @@ namespace decomp {
     class Socket_Impl {
         public:
             Socket_Impl() {
-                socket        = nullptr;
-                hasConnection = false;
+                socket = nullptr;
             }
 
             void onMessage(websocketpp::connection_hdl hdl, Server::message_ptr msg) {
                 const std::string& payload = msg->get_payload();
                 Buffer buf(payload.size());
                 buf.write(payload.data(), payload.size());
-                buf.position(0);
+                buf.seek(0);
                 socket->onMessage(buf);
             }
 
             void onOpen(websocketpp::connection_hdl hdl) {
-                if (hasConnection) {
-                    server.close(
-                        connection,
-                        websocketpp::close::status::normal,
-                        "Previous connection closed since new connection opened"
-                    );
-                }
-
-                connection    = hdl;
-                hasConnection = true;
+                connection = hdl;
                 socket->onConnectionEstablished();
             }
 
             void onClose(websocketpp::connection_hdl hdl) {
-                hasConnection = false;
+                connection.reset();
                 socket->onConnectionClosed();
+            }
+
+            bool connectionOpen() const {
+                using connection_type = websocketpp::connection<websocketpp::config::asio>;
+
+                try {
+                    connection_type* sharedConn = (connection_type*)connection.lock().get();
+
+                    if (!sharedConn) {
+                        return false;
+                    }
+
+                    return sharedConn->get_state() == websocketpp::session::state::open;
+                } catch (const std::exception& e) {
+                    return false;
+                }
             }
 
             Socket* socket;
             Server server;
             websocketpp::connection_hdl connection;
-            bool hasConnection;
     };
 
     class SocketErrorStreamBuf : public std::streambuf {
@@ -87,6 +92,8 @@ namespace decomp {
                 if (len > 0) {
                     m_socket->error("%s", m_buffer.c_str());
                 }
+
+                m_buffer = "";
 
                 return len;
             }
@@ -167,7 +174,7 @@ namespace decomp {
         }
 
         if (isOpen()) {
-            if (m_impl->hasConnection) {
+            if (m_impl->connectionOpen()) {
                 m_impl->server.close(m_impl->connection, websocketpp::close::status::normal, "Socket closed");
             }
 
@@ -182,12 +189,16 @@ namespace decomp {
         return m_impl != nullptr && m_impl->server.is_listening();
     }
 
+    bool Socket::hasConnection() const {
+        return m_impl != nullptr && m_impl->server.is_listening() && m_impl->connectionOpen();
+    }
+
     void Socket::send(const Buffer& buffer) {
         if (!isOpen()) {
             throw GenericException("Socket::send() - Socket is not open");
         }
 
-        if (!m_impl->hasConnection) {
+        if (!m_impl->connectionOpen()) {
             throw GenericException("Socket::send() - No active WebSocket connection to send to");
         }
 

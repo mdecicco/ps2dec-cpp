@@ -16,7 +16,7 @@ namespace decomp {
             void onInfo(const char* scope, const char* msg);
             void onWarn(const char* scope, const char* msg);
             void onError(const char* scope, const char* msg);
-            void onLogMessage(LOG_LEVEL level, const String& scope, const String& message) override;
+            void onLogMessage(LogLevel level, const String& scope, const String& message) override;
 
             Application* m_app;
     };

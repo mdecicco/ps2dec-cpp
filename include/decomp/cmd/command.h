@@ -8,9 +8,13 @@ namespace decomp {
     class Application;
     class Socket;
 
+    namespace packet {
+        class CommandResponse;
+    }
+
     namespace cmd {
-        class Response;
         class ICommandListener;
+        struct CommandInfo;
 
         enum CommandFlags : u8 {
             None      = 0b00000000,
@@ -23,9 +27,9 @@ namespace decomp {
             Pending        = 0,
             Committing     = 1,
             Committed      = 2,
-            RollingBack    = 3,
-            RolledBack     = 4,
-            CommitFailed   = 5,
+            CommitFailed   = 3,
+            RollingBack    = 4,
+            RolledBack     = 5,
             RollbackFailed = 6
         };
 
@@ -40,12 +44,22 @@ namespace decomp {
                 void resolveRollback(ICommandListener* listener);
                 void rejectRollback(ICommandListener* listener);
 
+                u32 getCommandId() const;
                 const char* getName() const;
                 CommandState getState() const;
-                CommandFlags getFlags() const;
+                packet::CommandResponse* getResponse() const;
+                CommandInfo* getInfo() const;
                 bool isResolved() const;
 
                 static ICommand* deserialize(Buffer& buffer, bool withState, Application* app);
+
+            private:
+                void setState(CommandState state);
+                Application* m_app;
+                u32 m_commandId;
+                CommandState m_state;
+                const char* m_name;
+                packet::CommandResponse* m_response;
 
             protected:
                 friend class CommandMgr;
@@ -53,7 +67,7 @@ namespace decomp {
 
                 void commit();
                 void rollback();
-                void initializeResponse(u32 commandId, Socket* socket);
+                void initializeResponse(Socket* socket);
                 void sendResponse();
 
                 virtual void generateResponse();
@@ -64,13 +78,9 @@ namespace decomp {
                 virtual void dispatchRollback(ICommandListener* listener)       = 0;
                 virtual void dispatchRollbackFailed(ICommandListener* listener) = 0;
 
-                Application* m_app;
-                const char* m_name;
-                Response* m_response;
-                CommandState m_state;
-                CommandFlags m_flags;
                 Array<ICommandListener*> m_pendingListeners;
                 Array<ICommandListener*> m_resolvedListeners;
+                CommandInfo* m_commandInfo;
         };
     }
 }

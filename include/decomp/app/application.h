@@ -3,14 +3,15 @@
 
 #include <decomp/app/options.h>
 #include <decomp/cmd/command_listener.h>
+#include <decomp/comm/socket_listener.h>
 #include <decomp/utils/logging.h>
-#include <decomp/utils/socket_listener.h>
 
 #include <chrono>
 
 namespace decomp {
     class Socket;
     class AppLogger;
+    class PluginMgr;
 
     namespace cmd {
         class CommandMgr;
@@ -24,6 +25,7 @@ namespace decomp {
 
             const ApplicationOptions& getOptions() const;
             Socket* getSocket() const;
+            PluginMgr* getPluginMgr() const;
             cmd::CommandMgr* getCommandMgr() const;
 
             i32 run();
@@ -35,10 +37,12 @@ namespace decomp {
             ApplicationOptions m_options;
             bool m_isRunning;
             bool m_shutdownRequested;
-            Socket* m_socket;
-            cmd::CommandMgr* m_commandMgr;
-            AppLogger* m_logger;
             Clock::time_point m_shutdownRequestedAt;
+
+            AppLogger* m_logger;
+            Socket* m_socket;
+            PluginMgr* m_pluginMgr;
+            cmd::CommandMgr* m_commandMgr;
 
             void onCommandCommit(cmd::CmdShutdown* command) override;
             void onMessage(Buffer& buffer) override;

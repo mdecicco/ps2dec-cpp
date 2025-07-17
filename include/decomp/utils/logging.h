@@ -5,17 +5,17 @@
 #include <decomp/utils/string.h>
 
 namespace decomp {
-    enum LOG_LEVEL {
-        LOG_DEBUG,
-        LOG_INFO,
-        LOG_WARNING,
-        LOG_ERROR,
-        LOG_FATAL
+    enum class LogLevel : u8 {
+        Debug = 0,
+        Info  = 1,
+        Warn  = 2,
+        Error = 3,
+        Fatal = 4
     };
 
     class ILogListener {
         public:
-            virtual void onLogMessage(LOG_LEVEL level, const String& scope, const String& message) = 0;
+            virtual void onLogMessage(LogLevel level, const String& scope, const String& message) = 0;
     };
 
     class IWithLogging : public ILogListener {
@@ -23,8 +23,8 @@ namespace decomp {
             IWithLogging(const String& scope);
             virtual ~IWithLogging();
 
-            void propagateLog(LOG_LEVEL level, const String& scope, const String& message);
-            void log(LOG_LEVEL level, const String& message);
+            void propagateLog(LogLevel level, const String& scope, const String& message);
+            void log(LogLevel level, const String& message);
             void log(const char* messageFmt, ...);
             void log(const String& msg);
             void debug(const char* messageFmt, ...);
@@ -41,7 +41,7 @@ namespace decomp {
             void addNestedLogger(IWithLogging* logger);
             void getScopes(Array<String>& scopes) const;
 
-            virtual void onLogMessage(LOG_LEVEL level, const String& scope, const String& message);
+            virtual void onLogMessage(LogLevel level, const String& scope, const String& message);
 
         protected:
             String m_scope;

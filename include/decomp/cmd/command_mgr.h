@@ -10,23 +10,22 @@ namespace decomp {
 
     namespace cmd {
         class ICommand;
-        class Response;
         class ICommandListener;
 
         enum CommandFlags : u8;
         typedef ICommand* (*CommandDeserializer)(Buffer& buffer);
 
+        struct CommandInfo {
+            public:
+                size_t commandTypeHash;
+                CommandDeserializer deserializer;
+                const char* name;
+                CommandFlags flags;
+                Array<ICommandListener*> listeners;
+        };
+
         class CommandMgr : public IWithLogging {
             public:
-                struct RegisteredCommand {
-                    public:
-                        size_t commandTypeHash;
-                        CommandDeserializer deserializer;
-                        const char* name;
-                        CommandFlags flags;
-                        Array<ICommandListener*> listeners;
-                };
-
                 CommandMgr(Application* app);
                 ~CommandMgr();
 
@@ -37,6 +36,8 @@ namespace decomp {
 
                 void serializeState(Buffer& buffer);
                 void deserializeState(Buffer& buffer);
+
+                Application* getApplication() const;
 
                 void submit(ICommand* command);
 
@@ -51,7 +52,7 @@ namespace decomp {
 
                 void unsubscribeFromAll(ICommandListener* listener);
 
-                const Array<RegisteredCommand>& getRegisteredCommands() const;
+                const Array<CommandInfo>& getRegisteredCommands() const;
 
             protected:
                 void reset();
@@ -60,7 +61,7 @@ namespace decomp {
                 Array<ICommand*> m_undoStack;
                 Array<ICommand*> m_redoStack;
                 Array<ICommand*> m_submittedCommands;
-                Array<RegisteredCommand> m_registeredCommands;
+                Array<CommandInfo> m_registeredCommands;
         };
     }
 }

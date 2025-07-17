@@ -1,4 +1,4 @@
-#include <decomp/utils/buffer.hpp>
+#include <decomp/utils/buffer.h>
 #include <decomp/utils/exceptions.h>
 #include <decomp/utils/string.h>
 
@@ -11,8 +11,8 @@ namespace decomp {
         m_data      = new u8[m_capacity];
     }
 
-    Buffer::Buffer(u64 capacity) {
-        m_canResize = capacity == 0;
+    Buffer::Buffer(u64 capacity, bool canResize) {
+        m_canResize = capacity == 0 || canResize;
         m_capacity  = capacity > 0 ? capacity : 4096;
         m_pos       = 0;
         m_used      = 0;
@@ -30,7 +30,35 @@ namespace decomp {
         m_used     = 0;
     }
 
-    void Buffer::write(const void* src, u64 sz) {
+    void Buffer::seek(u64 pos) {
+        if (pos > m_capacity) {
+            throw RangeException("Buffer::position() - Position %d would exceed buffer capacity", pos);
+        }
+
+        m_pos = pos;
+    }
+
+    u64 Buffer::position() const {
+        return m_pos;
+    }
+
+    u64 Buffer::size() const {
+        return m_used;
+    }
+
+    void Buffer::readBytes(void* dst, u64 sz) {
+        if ((m_pos + sz) > m_capacity) {
+            throw RangeException("Buffer::read() - Read of %d bytes would exceed buffer capacity", sz);
+        }
+
+        memcpy(dst, m_data + m_pos, sz);
+        m_pos += sz;
+        if (m_pos > m_used) {
+            m_used = m_pos;
+        }
+    }
+
+    void Buffer::writeBytes(const void* src, u64 sz) {
         if ((m_pos + sz) > m_capacity) {
             if (!m_canResize) {
                 throw RangeException(
@@ -52,95 +80,24 @@ namespace decomp {
         }
     }
 
-    void Buffer::read(void* dst, u64 sz) {
-        if ((m_pos + sz) > m_capacity) {
-            throw RangeException("Buffer::read() - Read of %d bytes would exceed buffer capacity", sz);
-        }
-
-        memcpy(dst, m_data + m_pos, sz);
-        m_pos += sz;
-        if (m_pos > m_used) {
-            m_used = m_pos;
-        }
+    bool Buffer::canResize() const {
+        return m_canResize;
     }
 
-    void Buffer::write(const Buffer* src, u64 sz) {
-        if (!src) {
-            throw InvalidArgumentException("Buffer::write() - Source buffer is null");
-        }
-
-        if (sz == UINT64_MAX) {
-            sz = src->remaining();
-        }
-
-        if (sz == 0) {
-            throw InvalidArgumentException("Buffer::write() - Source buffer has no remaining data to write");
-        }
-
-        if ((src->m_pos + sz) > src->m_capacity) {
-            throw RangeException("Buffer::write() - Write of %d bytes would exceed buffer capacity", sz);
-        }
-
-        write(src->data(), sz);
+    u64 Buffer::remaining() const {
+        return m_used - m_pos;
     }
 
-    void Buffer::read(Buffer* dst, u64 sz) {
-        dst->write(this, sz);
+    u64 Buffer::capacity() const {
+        return m_capacity;
     }
 
-    void Buffer::write(const String& str) {
-        static u8 n = 0;
-        if (str.size() == 0) {
-            write(&n, 1);
-            return;
-        }
-
-        write((void*)str.c_str(), str.size());
-        write(&n, 1);
+    void* Buffer::data() {
+        return m_data + m_pos;
     }
 
-    String Buffer::readStr() {
-        if (at_end()) {
-            throw RangeException("Buffer::readStr() - No more data to read");
-        }
-
-        String str;
-        char ch    = 0;
-        i32 readSz = 0;
-        do {
-            read(&ch, 1);
-
-            if (!ch) {
-                break;
-            }
-
-            str += ch;
-            readSz++;
-        } while (!at_end());
-
-        return str;
-    }
-
-    String Buffer::readStr(u32 len) {
-        if ((m_pos + len) > m_capacity) {
-            throw RangeException("Buffer::readStr() - Read of %d bytes would exceed buffer capacity", len);
-        }
-
-        String str;
-        for (u32 i = 0; i < len; i++) {
-            char ch = 0;
-            read(&ch, 1);
-            str += ch;
-        }
-
-        return str;
-    }
-
-    u64 Buffer::position(u64 pos) {
-        if (pos >= m_capacity) {
-            throw RangeException("Buffer::position() - Position %d would exceed buffer capacity", pos);
-        }
-        return m_pos = pos;
+    const void* Buffer::data() const {
+        return m_data + m_pos;
     }
 
     void* Buffer::data(u64 offset) {
@@ -155,38 +112,6 @@ namespace decomp {
             throw RangeException("Buffer::data() - Offset %d would exceed buffer capacity", offset);
         }
         return m_data + offset;
-    }
-
-    bool Buffer::canResize() const {
-        return m_canResize;
-    }
-
-    u64 Buffer::size() const {
-        return m_used;
-    }
-
-    u64 Buffer::remaining() const {
-        return m_used - m_pos;
-    }
-
-    u64 Buffer::capacity() const {
-        return m_capacity;
-    }
-
-    u64 Buffer::position() const {
-        return m_pos;
-    }
-
-    void* Buffer::data() {
-        return m_data + m_pos;
-    }
-
-    const void* Buffer::data() const {
-        return m_data + m_pos;
-    }
-
-    bool Buffer::at_end() const {
-        return m_pos == m_used;
     }
 
     void Buffer::save(const String& path) const {

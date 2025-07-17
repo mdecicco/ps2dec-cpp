@@ -25,9 +25,7 @@ namespace decomp {
 
             size_t commandTypeHash = typeid(CommandType).hash_code();
 
-            debug("Registering command: %s (%llu)", CommandType::name, commandTypeHash);
-
-            for (RegisteredCommand& cmd : m_registeredCommands) {
+            for (CommandInfo& cmd : m_registeredCommands) {
                 if (strcmp(cmd.name, CommandType::name) == 0) {
                     throw InvalidActionException(
                         "CommandMgr::registerCommand() - Command '%s' already registered", CommandType::name
@@ -44,13 +42,15 @@ namespace decomp {
                 Array<ICommandListener*>()
             });
             /* clang-format on */
+
+            debug("Registered command: %s (0x%llX)", CommandType::name, (u64)commandTypeHash);
         }
 
         template <typename CommandType>
         void CommandMgr::subscribeCommandListener(ICommandListener* listener) {
             size_t commandTypeHash = typeid(CommandType).hash_code();
 
-            for (RegisteredCommand& cmd : m_registeredCommands) {
+            for (CommandInfo& cmd : m_registeredCommands) {
                 if (cmd.commandTypeHash != commandTypeHash) {
                     continue;
                 }
@@ -87,7 +87,7 @@ namespace decomp {
                 );
             }
 
-            for (RegisteredCommand& cmd : m_registeredCommands) {
+            for (CommandInfo& cmd : m_registeredCommands) {
                 if (cmd.commandTypeHash != commandTypeHash) {
                     continue;
                 }

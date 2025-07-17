@@ -8,13 +8,13 @@ namespace decomp {
 
     IWithLogging::~IWithLogging() {}
 
-    void IWithLogging::propagateLog(LOG_LEVEL level, const String& scope, const String& message) {
+    void IWithLogging::propagateLog(LogLevel level, const String& scope, const String& message) {
         m_listeners.each([level, &scope, &message](ILogListener* logger) {
             logger->onLogMessage(level, scope, message);
         });
     }
 
-    void IWithLogging::log(LOG_LEVEL level, const String& message) {
+    void IWithLogging::log(LogLevel level, const String& message) {
         onLogMessage(level, m_scope, message);
     }
 
@@ -25,11 +25,11 @@ namespace decomp {
         i32 len = vsnprintf(out, 2048, messageFmt, l);
         va_end(l);
 
-        onLogMessage(LOG_INFO, m_scope, String(out, len));
+        onLogMessage(LogLevel::Info, m_scope, String(out, len));
     }
 
     void IWithLogging::log(const String& msg) {
-        onLogMessage(LOG_INFO, m_scope, msg);
+        onLogMessage(LogLevel::Info, m_scope, msg);
     }
 
     void IWithLogging::debug(const char* messageFmt, ...) {
@@ -39,11 +39,11 @@ namespace decomp {
         i32 len = vsnprintf(out, 2048, messageFmt, l);
         va_end(l);
 
-        onLogMessage(LOG_DEBUG, m_scope, String(out, len));
+        onLogMessage(LogLevel::Debug, m_scope, String(out, len));
     }
 
     void IWithLogging::debug(const String& msg) {
-        onLogMessage(LOG_DEBUG, m_scope, msg);
+        onLogMessage(LogLevel::Debug, m_scope, msg);
     }
 
     void IWithLogging::warn(const char* messageFmt, ...) {
@@ -53,11 +53,11 @@ namespace decomp {
         i32 len = vsnprintf(out, 2048, messageFmt, l);
         va_end(l);
 
-        onLogMessage(LOG_WARNING, m_scope, String(out, len));
+        onLogMessage(LogLevel::Warn, m_scope, String(out, len));
     }
 
     void IWithLogging::warn(const String& msg) {
-        onLogMessage(LOG_WARNING, m_scope, msg);
+        onLogMessage(LogLevel::Warn, m_scope, msg);
     }
 
     void IWithLogging::error(const char* messageFmt, ...) {
@@ -67,11 +67,11 @@ namespace decomp {
         i32 len = vsnprintf(out, 2048, messageFmt, l);
         va_end(l);
 
-        onLogMessage(LOG_ERROR, m_scope, String(out, len));
+        onLogMessage(LogLevel::Error, m_scope, String(out, len));
     }
 
     void IWithLogging::error(const String& msg) {
-        onLogMessage(LOG_ERROR, m_scope, msg);
+        onLogMessage(LogLevel::Error, m_scope, msg);
     }
 
     void IWithLogging::fatal(const char* messageFmt, ...) {
@@ -81,11 +81,11 @@ namespace decomp {
         i32 len = vsnprintf(out, 2048, messageFmt, l);
         va_end(l);
 
-        onLogMessage(LOG_FATAL, m_scope, String(out, len));
+        onLogMessage(LogLevel::Fatal, m_scope, String(out, len));
     }
 
     void IWithLogging::fatal(const String& msg) {
-        onLogMessage(LOG_FATAL, m_scope, msg);
+        onLogMessage(LogLevel::Fatal, m_scope, msg);
     }
 
     void IWithLogging::subscribeLogListener(ILogListener* listener) {
@@ -136,7 +136,7 @@ namespace decomp {
         m_nestedLoggers.each([&scopes](IWithLogging* logger) { logger->getScopes(scopes); });
     }
 
-    void IWithLogging::onLogMessage(LOG_LEVEL level, const String& scope, const String& message) {
+    void IWithLogging::onLogMessage(LogLevel level, const String& scope, const String& message) {
         propagateLog(level, scope, message);
     }
 };

@@ -1,10 +1,12 @@
 #include <decomp/cmd/command_mgr.h>
 
+#include <decomp/app/application.h>
 #include <decomp/cmd/cmd_shutdown.h>
 #include <decomp/cmd/command_listener.h>
-
+#include <decomp/comm/packets/client_command.h>
+#include <decomp/comm/socket.h>
 #include <decomp/utils/array.hpp>
-#include <decomp/utils/buffer.hpp>
+#include <decomp/utils/buffer.h>
 #include <decomp/utils/exceptions.h>
 
 namespace decomp {
@@ -31,7 +33,7 @@ namespace decomp {
 
             command->rollback();
 
-            if (command->getFlags() & CommandFlags::Redoable) {
+            if (command->getInfo()->flags & CommandFlags::Redoable) {
                 m_redoStack.push(command);
             }
         }
@@ -46,7 +48,7 @@ namespace decomp {
 
             command->commit();
 
-            if (command->getFlags() & CommandFlags::Undoable) {
+            if (command->getInfo()->flags & CommandFlags::Undoable) {
                 m_undoStack.push(command);
             }
         }
@@ -92,11 +94,13 @@ namespace decomp {
             }
         }
 
-        void CommandMgr::submit(ICommand* command) {
-            debug("Received '%s' command", command->getName());
+        Application* CommandMgr::getApplication() const {
+            return m_app;
+        }
 
-            RegisteredCommand* registeredCommand = nullptr;
-            for (RegisteredCommand& cmd : m_registeredCommands) {
+        void CommandMgr::submit(ICommand* command) {
+            CommandInfo* registeredCommand = nullptr;
+            for (CommandInfo& cmd : m_registeredCommands) {
                 if (strcmp(cmd.name, command->getName()) == 0) {
                     registeredCommand = &cmd;
                     break;
@@ -113,21 +117,19 @@ namespace decomp {
             }
 
             if ((registeredCommand->flags & CommandFlags::ForServer) == 0) {
-                String msg = String::Format(
-                    "CommandMgr::submit() - '%s' command is invalid in this context", command->getName()
-                );
-
+                packet::ClientCommand cmd(command, m_app->getSocket());
+                cmd.send();
                 delete command;
-
-                throw InvalidActionException(msg.c_str());
+                return;
             }
 
-            command->m_app   = m_app;
-            command->m_flags = registeredCommand->flags;
+            debug("Received '%s' command", command->getName());
 
+            command->m_app         = m_app;
+            command->m_commandInfo = registeredCommand;
             command->commit();
 
-            if (command->getFlags() & CommandFlags::Undoable) {
+            if (registeredCommand->flags & CommandFlags::Undoable) {
                 m_undoStack.push(command);
                 m_redoStack.clear();
             }
@@ -136,7 +138,7 @@ namespace decomp {
         }
 
         void CommandMgr::unsubscribeFromAll(ICommandListener* listener) {
-            for (RegisteredCommand& cmd : m_registeredCommands) {
+            for (CommandInfo& cmd : m_registeredCommands) {
                 i64 index = cmd.listeners.findIndex([listener](ICommandListener* l) { return l == listener; });
                 if (index == -1) {
                     continue;
@@ -147,7 +149,7 @@ namespace decomp {
             }
         }
 
-        const Array<CommandMgr::RegisteredCommand>& CommandMgr::getRegisteredCommands() const {
+        const Array<CommandInfo>& CommandMgr::getRegisteredCommands() const {
             return m_registeredCommands;
         }
 

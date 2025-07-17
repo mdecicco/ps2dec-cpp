@@ -1,4 +1,4 @@
-#include <decomp/utils/socket_listener.h>
+#include <decomp/comm/socket_listener.h>
 
 namespace decomp {
     void ISocketListener::onConnectionEstablished() {}

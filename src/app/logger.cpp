@@ -1,7 +1,10 @@
 #include <decomp/app/application.h>
 #include <decomp/app/logger.h>
-
+#include <decomp/cmd/cmd_log.h>
+#include <decomp/cmd/command_mgr.h>
+#include <decomp/comm/socket.h>
 #include <decomp/utils/array.hpp>
+#include <decomp/utils/exceptions.h>
 
 namespace decomp {
     AppLogger::AppLogger(Application* app) {
@@ -98,22 +101,32 @@ namespace decomp {
         printf("\033[31m%*s\033[0m\n", maxScopeLength, msg);
     }
 
-    void AppLogger::onLogMessage(LOG_LEVEL level, const String& scope, const String& message) {
+    void AppLogger::onLogMessage(LogLevel level, const String& scope, const String& message) {
+        try {
+            if (m_app->getSocket()->hasConnection()) {
+                m_app->getCommandMgr()->submit(cmd::CmdLog::create(level, scope, message));
+            }
+        } catch (const GenericException& e) {
+            printf("Failed to send log message: %s\n", e.what());
+        } catch (const std::exception& e) {
+            printf("Failed to send log message: %s\n", e.what());
+        }
+
         switch (level) {
-            case LOG_LEVEL::LOG_DEBUG: {
+            case LogLevel::Debug: {
                 onDebug(scope.c_str(), message.c_str());
                 break;
             }
-            case LOG_LEVEL::LOG_INFO: {
+            case LogLevel::Info: {
                 onInfo(scope.c_str(), message.c_str());
                 break;
             }
-            case LOG_LEVEL::LOG_WARNING: {
+            case LogLevel::Warn: {
                 onWarn(scope.c_str(), message.c_str());
                 break;
             }
-            case LOG_LEVEL::LOG_ERROR:
-            case LOG_LEVEL::LOG_FATAL: {
+            case LogLevel::Error:
+            case LogLevel::Fatal: {
                 onError(scope.c_str(), message.c_str());
                 break;
             }

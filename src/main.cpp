@@ -1,6 +1,9 @@
 #include <decomp/decomp.h>
 #include <iostream>
 
+#include <decomp/io/file.h>
+#include <decomp/io/tagged_stream.h>
+
 void printHelp(const decomp::CommandLineInterface& cli) {
     std::cout << "Usage: decomp [options]" << std::endl;
     std::cout << "Options:" << std::endl;

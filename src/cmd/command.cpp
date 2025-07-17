@@ -2,12 +2,13 @@
 
 #include <decomp/cmd/cmd_shutdown.h>
 #include <decomp/cmd/command_mgr.h>
-#include <decomp/cmd/response.h>
+#include <decomp/comm/packets/cmd_response.h>
+#include <decomp/comm/packets/cmd_state.h>
 
 #include <decomp/app/application.h>
 
 #include <decomp/utils/array.hpp>
-#include <decomp/utils/buffer.hpp>
+#include <decomp/utils/buffer.h>
 #include <decomp/utils/exceptions.h>
 
 namespace decomp {
@@ -27,11 +28,12 @@ namespace decomp {
         }
 
         ICommand::ICommand(const char* name) {
-            m_app      = nullptr;
-            m_name     = name;
-            m_response = nullptr;
-            m_state    = CommandState::Pending;
-            m_flags    = CommandFlags::None;
+            m_app         = nullptr;
+            m_commandId   = 0;
+            m_state       = CommandState::Pending;
+            m_name        = name;
+            m_response    = nullptr;
+            m_commandInfo = nullptr;
         }
 
         ICommand::~ICommand() {
@@ -52,15 +54,15 @@ namespace decomp {
             u64 pos = buffer.position();
 
             try {
+                buffer.write(m_commandId);
                 buffer.write(String(m_name));
                 buffer.write(m_state);
-                buffer.write(m_flags);
                 doSerialize(buffer);
             } catch (const GenericException& e) {
-                buffer.position(pos);
+                buffer.seek(pos);
                 throw e;
             } catch (const std::exception& e) {
-                buffer.position(pos);
+                buffer.seek(pos);
                 throw e;
             }
         }
@@ -82,7 +84,7 @@ namespace decomp {
                 return;
             }
 
-            m_state = CommandState::Committed;
+            setState(CommandState::Committed);
 
             if (m_response) {
                 sendResponse();
@@ -101,7 +103,7 @@ namespace decomp {
 
             m_pendingListeners.clear();
 
-            m_state = CommandState::CommitFailed;
+            setState(CommandState::CommitFailed);
 
             Array<ICommandListener*> dispatchTo = m_resolvedListeners;
             for (ICommandListener* listener : dispatchTo) {
@@ -128,7 +130,7 @@ namespace decomp {
                 return;
             }
 
-            m_state = CommandState::RolledBack;
+            setState(CommandState::RolledBack);
         }
 
         void ICommand::rejectRollback(ICommandListener* listener) {
@@ -143,7 +145,7 @@ namespace decomp {
 
             m_pendingListeners.clear();
 
-            m_state = CommandState::RollbackFailed;
+            setState(CommandState::RollbackFailed);
 
             Array<ICommandListener*> dispatchTo = m_resolvedListeners;
             for (ICommandListener* listener : dispatchTo) {
@@ -153,24 +155,9 @@ namespace decomp {
             m_resolvedListeners.clear();
         }
 
-        void ICommand::initializeResponse(u32 commandId, Socket* socket) {
-            if (m_response != nullptr) {
-                throw InvalidActionException("Command::initializeResponse() - Command already has a response handler");
-            }
-
-            m_response = new Response(commandId, socket);
+        u32 ICommand::getCommandId() const {
+            return m_commandId;
         }
-
-        void ICommand::sendResponse() {
-            if (m_response == nullptr) {
-                throw InvalidActionException("Command::sendResponse() - Command has no response handler");
-            }
-
-            generateResponse();
-            m_response->send();
-        }
-
-        void ICommand::generateResponse() {}
 
         const char* ICommand::getName() const {
             return m_name;
@@ -180,49 +167,61 @@ namespace decomp {
             return m_state;
         }
 
-        CommandFlags ICommand::getFlags() const {
-            return m_flags;
+        packet::CommandResponse* ICommand::getResponse() const {
+            return m_response;
+        }
+
+        CommandInfo* ICommand::getInfo() const {
+            return m_commandInfo;
         }
 
         ICommand* ICommand::deserialize(Buffer& buffer, bool withState, Application* app) {
             u64 pos = buffer.position();
 
             ICommand* result = nullptr;
+            u32 commandId    = 0;
             String type;
-            CommandState state;
+            CommandState state = CommandState::Pending;
 
             try {
+                buffer.read(commandId);
                 type  = buffer.readStr();
                 state = CommandState::Pending;
                 if (withState) {
                     buffer.read(state);
                 }
 
-                const Array<CommandMgr::RegisteredCommand>& commands = app->getCommandMgr()->getRegisteredCommands();
-                for (const CommandMgr::RegisteredCommand& cmd : commands) {
+                const Array<CommandInfo>& commands = app->getCommandMgr()->getRegisteredCommands();
+                for (const CommandInfo& cmd : commands) {
                     if (type == cmd.name) {
-                        result          = cmd.deserializer(buffer);
-                        result->m_app   = app;
-                        result->m_name  = cmd.name;
-                        result->m_state = state;
-                        result->m_flags = cmd.flags;
+                        result              = cmd.deserializer(buffer);
+                        result->m_app       = app;
+                        result->m_commandId = commandId;
+                        result->m_name      = cmd.name;
+                        result->m_state     = state;
                         break;
                     }
                 }
             } catch (const GenericException& e) {
-                buffer.position(pos);
+                buffer.seek(pos);
                 throw e;
             } catch (const std::exception& e) {
-                buffer.position(pos);
+                buffer.seek(pos);
                 throw e;
             }
 
             if (!result) {
-                buffer.position(pos);
+                buffer.seek(pos);
                 throw InputException("Command::deserialize() - Unknown command '%s'", type.c_str());
             }
 
             return result;
+        }
+
+        void ICommand::setState(CommandState state) {
+            m_state = state;
+            packet::CommandStateChanged cmdState(m_commandId, state, m_app->getSocket());
+            cmdState.send();
         }
 
         void ICommand::commit() {
@@ -232,10 +231,10 @@ namespace decomp {
                 );
             }
 
-            m_state = CommandState::Committing;
+            setState(CommandState::Committing);
 
-            const Array<CommandMgr::RegisteredCommand>& commands = m_app->getCommandMgr()->getRegisteredCommands();
-            for (const CommandMgr::RegisteredCommand& cmd : commands) {
+            const Array<CommandInfo>& commands = m_app->getCommandMgr()->getRegisteredCommands();
+            for (const CommandInfo& cmd : commands) {
                 if (strcmp(cmd.name, m_name) != 0) {
                     continue;
                 }
@@ -250,7 +249,7 @@ namespace decomp {
                     dispatchCommit(listener);
                 }
             } catch (const GenericException& e) {
-                m_state = CommandState::CommitFailed;
+                setState(CommandState::CommitFailed);
 
                 Array<ICommandListener*> dispatchTo = m_resolvedListeners;
                 for (ICommandListener* listener : dispatchTo) {
@@ -259,7 +258,7 @@ namespace decomp {
 
                 throw e;
             } catch (const std::exception& e) {
-                m_state = CommandState::CommitFailed;
+                setState(CommandState::CommitFailed);
 
                 Array<ICommandListener*> dispatchTo = m_resolvedListeners;
                 for (ICommandListener* listener : dispatchTo) {
@@ -275,10 +274,10 @@ namespace decomp {
                 throw InvalidActionException("Command::rollback() - Command is not committed");
             }
 
-            m_state = CommandState::RollingBack;
+            setState(CommandState::RollingBack);
 
-            const Array<CommandMgr::RegisteredCommand>& commands = m_app->getCommandMgr()->getRegisteredCommands();
-            for (const CommandMgr::RegisteredCommand& cmd : commands) {
+            const Array<CommandInfo>& commands = m_app->getCommandMgr()->getRegisteredCommands();
+            for (const CommandInfo& cmd : commands) {
                 if (strcmp(cmd.name, m_name) != 0) {
                     continue;
                 }
@@ -293,9 +292,9 @@ namespace decomp {
                     dispatchRollback(listener);
                 }
 
-                m_state = CommandState::RolledBack;
+                setState(CommandState::RolledBack);
             } catch (const GenericException& e) {
-                m_state = CommandState::RollbackFailed;
+                setState(CommandState::RollbackFailed);
 
                 Array<ICommandListener*> dispatchTo = m_resolvedListeners;
                 for (ICommandListener* listener : dispatchTo) {
@@ -304,7 +303,7 @@ namespace decomp {
 
                 throw e;
             } catch (const std::exception& e) {
-                m_state = CommandState::RollbackFailed;
+                setState(CommandState::RollbackFailed);
 
                 Array<ICommandListener*> dispatchTo = m_resolvedListeners;
                 for (ICommandListener* listener : dispatchTo) {
@@ -314,6 +313,29 @@ namespace decomp {
                 throw e;
             }
         }
+
+        void ICommand::initializeResponse(Socket* socket) {
+            if (m_response != nullptr) {
+                throw InvalidActionException("Command::initializeResponse() - Command already has a response handler");
+            }
+
+            if (m_commandId == 0) {
+                throw InvalidActionException("Command::initializeResponse() - Command has no id");
+            }
+
+            m_response = new packet::CommandResponse(m_commandId, socket);
+        }
+
+        void ICommand::sendResponse() {
+            if (m_response == nullptr) {
+                throw InvalidActionException("Command::sendResponse() - Command has no response handler");
+            }
+
+            generateResponse();
+            m_response->send();
+        }
+
+        void ICommand::generateResponse() {}
 
         void ICommand::doSerialize(Buffer& buffer) const {}
 

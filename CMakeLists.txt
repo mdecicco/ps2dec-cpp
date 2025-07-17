@@ -61,6 +61,8 @@ if (CMAKE_VERSION VERSION_GREATER 3.7.8)
         set(VS_ADD_NATIVE_VISUALIZERS FALSE CACHE INTERNAL "Native visualizers are a Visual Studio extension" FORCE)
     endif()
 
+    set(VS_ADD_NATIVE_VISUALIZERS TRUE)
+
     if (VS_ADD_NATIVE_VISUALIZERS)
         target_sources(${PROJECT_NAME} INTERFACE
             ${CMAKE_CURRENT_SOURCE_DIR}/debug.natvis
