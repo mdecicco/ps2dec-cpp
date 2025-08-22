@@ -45,14 +45,16 @@ namespace render {
             IWithRendering();
             virtual ~IWithRendering();
 
-            bool initRendering(decomp::Window* win);
+            bool initRendering(decomp::Window* win, u32 sampleCount = 1);
             bool initDebugDrawing(u32 maxLines = 4096);
             void shutdownRendering();
 
             virtual const vulkan::PhysicalDevice* choosePhysicalDevice(const Array<vulkan::PhysicalDevice>& devices);
             virtual bool setupInstance(vulkan::Instance* instance);
             virtual bool setupDevice(vulkan::LogicalDevice* device);
-            virtual bool setupSwapchain(vulkan::SwapChain* swapChain, const vulkan::SwapChainSupport& support);
+            virtual bool setupSwapchain(
+                vulkan::SwapChain* swapChain, const vulkan::SwapChainSupport& support, u32 sampleCount = 1
+            );
             virtual bool setupShaderCompiler(vulkan::ShaderCompiler* shaderCompiler);
             virtual void onWindowResize(decomp::Window* win, u32 width, u32 height);
 

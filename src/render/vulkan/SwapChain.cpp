@@ -17,10 +17,11 @@
 namespace render {
     namespace vulkan {
         SwapChain::SwapChain() {
-            m_surface   = nullptr;
-            m_device    = nullptr;
-            m_swapChain = VK_NULL_HANDLE;
-            m_format    = VK_FORMAT_UNDEFINED;
+            m_surface     = nullptr;
+            m_device      = nullptr;
+            m_swapChain   = VK_NULL_HANDLE;
+            m_format      = VK_FORMAT_UNDEFINED;
+            m_sampleCount = 1;
         }
 
         SwapChain::~SwapChain() {
@@ -55,12 +56,28 @@ namespace render {
             return m_depthBuffers;
         }
 
+        const Array<Texture*>& SwapChain::getColorBuffers() const {
+            return m_colorBuffers;
+        }
+
+        const Array<Texture*>& SwapChain::getResolveBuffers() const {
+            return m_resolveBuffers;
+        }
+
         const VkExtent2D& SwapChain::getExtent() const {
             return m_extent;
         }
 
         VkFormat SwapChain::getFormat() const {
             return m_format;
+        }
+
+        u32 SwapChain::getSampleCount() const {
+            return m_sampleCount;
+        }
+
+        bool SwapChain::isMultisampled() const {
+            return m_sampleCount > 1;
         }
 
         bool SwapChain::init(
@@ -71,6 +88,7 @@ namespace render {
             VkColorSpaceKHR colorSpace,
             VkPresentModeKHR presentMode,
             u32 imageCount,
+            u32 sampleCount,
             VkImageUsageFlags usage,
             VkCompositeAlphaFlagBitsKHR compositeAlpha,
             SwapChain* previous
@@ -81,6 +99,13 @@ namespace render {
 
             m_surface = surface;
             m_device  = device;
+
+            // Validate and set sample count
+            if (!RenderPass::isSampleCountSupported(sampleCount, m_device->getPhysicalDevice())) {
+                // Fallback to maximum supported sample count
+                sampleCount = RenderPass::getMaxSupportedSampleCount(m_device->getPhysicalDevice());
+            }
+            m_sampleCount = sampleCount;
 
             auto capabilities = support.getCapabilities();
 
@@ -148,8 +173,11 @@ namespace render {
 
             m_imageViews.reserve(count);
             m_depthBuffers.reserve(count);
+            m_colorBuffers.reserve(count);
+            m_resolveBuffers.reserve(count);
 
             for (u32 i = 0; i < count; i++) {
+                // Create image view for swapchain image (always needed for resolve/presentation)
                 VkImageViewCreateInfo iv           = {};
                 iv.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
                 iv.image                           = m_images[i];
@@ -172,26 +200,144 @@ namespace render {
                 }
                 m_imageViews.push(view);
 
-                Texture* depth = new Texture(m_device);
-                bool r         = depth->init(
-                    m_extent.width,
-                    m_extent.height,
-                    VK_FORMAT_D32_SFLOAT,
-                    VK_IMAGE_TYPE_2D,
-                    1,
-                    1,
-                    1,
-                    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                    VK_IMAGE_LAYOUT_UNDEFINED
-                );
+                if (isMultisampled()) {
+                    // MSAA setup: create MSAA color buffer, MSAA depth buffer, and resolve target
 
-                if (!r) {
-                    delete depth;
-                    shutdown();
-                    return false;
+                    // MSAA color buffer
+                    Texture* msaaColor = new Texture(m_device);
+                    bool colorResult   = msaaColor->init(
+                        m_extent.width,
+                        m_extent.height,
+                        format,
+                        VK_IMAGE_TYPE_2D,
+                        1,
+                        1,
+                        1,
+                        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                        VK_IMAGE_LAYOUT_UNDEFINED,
+                        m_sampleCount
+                    );
+
+                    if (!colorResult) {
+                        delete msaaColor;
+                        shutdown();
+                        return false;
+                    }
+                    m_colorBuffers.push(msaaColor);
+
+                    // MSAA depth buffer
+                    Texture* msaaDepth = new Texture(m_device);
+                    bool depthResult   = msaaDepth->init(
+                        m_extent.width,
+                        m_extent.height,
+                        VK_FORMAT_D32_SFLOAT,
+                        VK_IMAGE_TYPE_2D,
+                        1,
+                        1,
+                        1,
+                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                        VK_IMAGE_LAYOUT_UNDEFINED,
+                        m_sampleCount
+                    );
+
+                    if (!depthResult) {
+                        delete msaaDepth;
+                        shutdown();
+                        return false;
+                    }
+                    m_depthBuffers.push(msaaDepth);
+
+                    // Resolve buffer - create texture wrapper for swapchain image
+                    Texture* resolveTarget = new Texture(m_device);
+                    bool resolveResult     = resolveTarget->initFromExistingImage(
+                        m_images[i],
+                        m_extent.width,
+                        m_extent.height,
+                        format,
+                        VK_IMAGE_TYPE_2D,
+                        1,
+                        1,
+                        1,
+                        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                        VK_IMAGE_LAYOUT_UNDEFINED
+                    );
+
+                    if (!resolveResult) {
+                        delete resolveTarget;
+                        shutdown();
+                        return false;
+                    }
+                    m_resolveBuffers.push(resolveTarget);
+
+                } else {
+                    // Non-MSAA setup: traditional single-sample textures
+
+                    // Color buffer is the swapchain image - create texture wrapper
+                    Texture* colorTarget = new Texture(m_device);
+                    bool colorResult     = colorTarget->initFromExistingImage(
+                        m_images[i],
+                        m_extent.width,
+                        m_extent.height,
+                        format,
+                        VK_IMAGE_TYPE_2D,
+                        1,
+                        1,
+                        1,
+                        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                        VK_IMAGE_LAYOUT_UNDEFINED
+                    );
+
+                    if (!colorResult) {
+                        delete colorTarget;
+                        shutdown();
+                        return false;
+                    }
+                    m_colorBuffers.push(colorTarget);
+
+                    // Single-sample depth buffer
+                    Texture* depth   = new Texture(m_device);
+                    bool depthResult = depth->init(
+                        m_extent.width,
+                        m_extent.height,
+                        VK_FORMAT_D32_SFLOAT,
+                        VK_IMAGE_TYPE_2D,
+                        1,
+                        1,
+                        1,
+                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                        VK_IMAGE_LAYOUT_UNDEFINED,
+                        1
+                    );
+
+                    if (!depthResult) {
+                        delete depth;
+                        shutdown();
+                        return false;
+                    }
+                    m_depthBuffers.push(depth);
+
+                    // Resolve buffer is the same as color buffer for non-MSAA
+                    Texture* resolveTarget = new Texture(m_device);
+                    bool resolveResult     = resolveTarget->initFromExistingImage(
+                        m_images[i],
+                        m_extent.width,
+                        m_extent.height,
+                        format,
+                        VK_IMAGE_TYPE_2D,
+                        1,
+                        1,
+                        1,
+                        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                        VK_IMAGE_LAYOUT_UNDEFINED
+                    );
+
+                    if (!resolveResult) {
+                        delete resolveTarget;
+                        shutdown();
+                        return false;
+                    }
+                    m_resolveBuffers.push(resolveTarget);
                 }
-
-                m_depthBuffers.push(depth);
             }
 
             m_format = format;
@@ -266,6 +412,7 @@ namespace render {
 
             m_imageViews.reserve(count);
             for (u32 i = 0; i < count; i++) {
+                // Create image view for swapchain image (always needed for resolve/presentation)
                 VkImageViewCreateInfo iv           = {};
                 iv.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
                 iv.image                           = m_images[i];
@@ -289,23 +436,142 @@ namespace render {
                 }
                 m_imageViews.push(view);
 
-                // reuse old depth buffer Texture objects
-                m_depthBuffers[i]->shutdown();
-                bool r = m_depthBuffers[i]->init(
-                    m_extent.width,
-                    m_extent.height,
-                    VK_FORMAT_D32_SFLOAT,
-                    VK_IMAGE_TYPE_2D,
-                    1,
-                    1,
-                    1,
-                    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                    VK_IMAGE_LAYOUT_UNDEFINED
-                );
+                if (isMultisampled()) {
+                    // MSAA setup: recreate MSAA color and depth buffers
 
-                if (!r) {
-                    shutdown();
-                    return false;
+                    // Recreate MSAA color buffer
+                    if (m_colorBuffers[i]) {
+                        m_colorBuffers[i]->shutdown();
+                        bool colorResult = m_colorBuffers[i]->init(
+                            m_extent.width,
+                            m_extent.height,
+                            m_createInfo.imageFormat,
+                            VK_IMAGE_TYPE_2D,
+                            1,
+                            1,
+                            1,
+                            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                            VK_IMAGE_LAYOUT_UNDEFINED,
+                            m_sampleCount
+                        );
+
+                        if (!colorResult) {
+                            shutdown();
+                            return false;
+                        }
+                    }
+
+                    // Recreate MSAA depth buffer
+                    if (m_depthBuffers[i]) {
+                        m_depthBuffers[i]->shutdown();
+                        bool depthResult = m_depthBuffers[i]->init(
+                            m_extent.width,
+                            m_extent.height,
+                            VK_FORMAT_D32_SFLOAT,
+                            VK_IMAGE_TYPE_2D,
+                            1,
+                            1,
+                            1,
+                            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                            VK_IMAGE_LAYOUT_UNDEFINED,
+                            m_sampleCount
+                        );
+
+                        if (!depthResult) {
+                            shutdown();
+                            return false;
+                        }
+                    }
+
+                    // Recreate resolve buffers with new swapchain images
+                    if (m_resolveBuffers[i]) {
+                        m_resolveBuffers[i]->shutdown();
+                        bool resolveResult = m_resolveBuffers[i]->initFromExistingImage(
+                            m_images[i],
+                            m_extent.width,
+                            m_extent.height,
+                            m_createInfo.imageFormat,
+                            VK_IMAGE_TYPE_2D,
+                            1,
+                            1,
+                            1,
+                            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                            VK_IMAGE_LAYOUT_UNDEFINED
+                        );
+
+                        if (!resolveResult) {
+                            shutdown();
+                            return false;
+                        }
+                    }
+
+                } else {
+                    // Non-MSAA setup: recreate single-sample depth buffer
+
+                    // Recreate color buffer wrapper with new swapchain image
+                    if (m_colorBuffers[i]) {
+                        m_colorBuffers[i]->shutdown();
+                        bool colorResult = m_colorBuffers[i]->initFromExistingImage(
+                            m_images[i],
+                            m_extent.width,
+                            m_extent.height,
+                            m_createInfo.imageFormat,
+                            VK_IMAGE_TYPE_2D,
+                            1,
+                            1,
+                            1,
+                            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                            VK_IMAGE_LAYOUT_UNDEFINED
+                        );
+
+                        if (!colorResult) {
+                            shutdown();
+                            return false;
+                        }
+                    }
+
+                    if (m_depthBuffers[i]) {
+                        m_depthBuffers[i]->shutdown();
+                        bool depthResult = m_depthBuffers[i]->init(
+                            m_extent.width,
+                            m_extent.height,
+                            VK_FORMAT_D32_SFLOAT,
+                            VK_IMAGE_TYPE_2D,
+                            1,
+                            1,
+                            1,
+                            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                            VK_IMAGE_LAYOUT_UNDEFINED,
+                            1
+                        );
+
+                        if (!depthResult) {
+                            shutdown();
+                            return false;
+                        }
+                    }
+
+                    // Recreate resolve buffer wrapper with new swapchain image
+                    if (m_resolveBuffers[i]) {
+                        m_resolveBuffers[i]->shutdown();
+                        bool resolveResult = m_resolveBuffers[i]->initFromExistingImage(
+                            m_images[i],
+                            m_extent.width,
+                            m_extent.height,
+                            m_createInfo.imageFormat,
+                            VK_IMAGE_TYPE_2D,
+                            1,
+                            1,
+                            1,
+                            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                            VK_IMAGE_LAYOUT_UNDEFINED
+                        );
+
+                        if (!resolveResult) {
+                            shutdown();
+                            return false;
+                        }
+                    }
                 }
             }
 
@@ -343,6 +609,14 @@ namespace render {
                 delete m_depthBuffers[i];
             }
 
+            for (u32 i = 0; i < m_colorBuffers.size(); i++) {
+                delete m_colorBuffers[i];
+            }
+
+            for (u32 i = 0; i < m_resolveBuffers.size(); i++) {
+                delete m_resolveBuffers[i];
+            }
+
             vkDestroySwapchainKHR(m_device->get(), m_swapChain, m_device->getInstance()->getAllocator());
             m_swapChain = VK_NULL_HANDLE;
             m_device    = nullptr;
@@ -350,8 +624,11 @@ namespace render {
             m_imageViews.clear();
             m_images.clear();
             m_depthBuffers.clear();
-            m_format     = VK_FORMAT_UNDEFINED;
-            m_createInfo = {};
+            m_colorBuffers.clear();
+            m_resolveBuffers.clear();
+            m_format      = VK_FORMAT_UNDEFINED;
+            m_createInfo  = {};
+            m_sampleCount = 1;
         }
 
         void SwapChain::onPipelineCreated(GraphicsPipeline* pipeline) {

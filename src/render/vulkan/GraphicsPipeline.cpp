@@ -82,6 +82,8 @@ namespace render {
             m_vertexFormat                               = nullptr;
 
             reset();
+            // Initialize sample count from render pass
+            m_sampleCount = render->getSampleCount();
             swapChain->onPipelineCreated(this);
         }
 
@@ -134,6 +136,7 @@ namespace render {
             m_depthWriteEnabledDynamic      = false;
             m_colorBlendEnabled             = false;
             m_colorBlendEnabledDynamic      = false;
+            m_sampleCount                   = 1; // Default to no MSAA
 
             m_vertexShader    = nullptr;
             m_fragShader      = nullptr;
@@ -429,6 +432,13 @@ namespace render {
             m_colorBlendEnabled = enabled;
         }
 
+        void GraphicsPipeline::setSampleCount(u32 sampleCount) {
+            if (m_isInitialized) {
+                return; // Can't change sample count after pipeline is created
+            }
+            m_sampleCount = sampleCount;
+        }
+
         bool GraphicsPipeline::init() {
             if (m_isInitialized || !m_device || !m_swapChain || !m_compiler) {
                 return false;
@@ -579,7 +589,7 @@ namespace render {
             VkPipelineMultisampleStateCreateInfo msi = {};
             msi.sType                                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
             msi.sampleShadingEnable                  = VK_FALSE;
-            msi.rasterizationSamples                 = VK_SAMPLE_COUNT_1_BIT;
+            msi.rasterizationSamples                 = RenderPass::sampleCountToVkFlags(m_sampleCount);
             msi.minSampleShading                     = 1.0f;
             msi.pSampleMask                          = nullptr;
             msi.alphaToCoverageEnable                = VK_FALSE;

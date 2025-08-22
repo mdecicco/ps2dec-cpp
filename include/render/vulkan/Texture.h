@@ -39,6 +39,19 @@ namespace render {
                     u32 depth               = 1,
                     u32 arrayLayers         = 1,
                     VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+                    VkImageLayout layout    = VK_IMAGE_LAYOUT_UNDEFINED,
+                    u32 sampleCount         = 1
+                );
+                bool initFromExistingImage(
+                    VkImage existingImage,
+                    u32 width,
+                    u32 height,
+                    VkFormat format,
+                    VkImageType type        = VK_IMAGE_TYPE_2D,
+                    u32 mipLevels           = 1,
+                    u32 depth               = 1,
+                    u32 arrayLayers         = 1,
+                    VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT,
                     VkImageLayout layout    = VK_IMAGE_LAYOUT_UNDEFINED
                 );
                 bool initSampler(VkFilter magFilter = VK_FILTER_NEAREST, VkFilter minFilter = VK_FILTER_NEAREST);
@@ -65,6 +78,7 @@ namespace render {
                 VkDeviceMemory m_memory;
                 VkImageView m_view;
                 VkSampler m_sampler;
+                bool m_ownsImage; // Whether this texture owns the VkImage (and should destroy it)
         };
     };
 };

@@ -47,6 +47,12 @@ type VulkanRenderPassProps = {
     imageCount?: u32;
 
     /**
+     * The sample count of the swap chain
+     * @default 1
+     */
+    sampleCount?: u32;
+
+    /**
      * The usage flags of the swap chain images
      * @default VkImageUsageFlags.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
      */
@@ -125,6 +131,7 @@ function createContext(
         props.imageColorSpace ?? VkColorSpaceKHR.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
         props.presentMode ?? VkPresentModeKHR.VK_PRESENT_MODE_FIFO_KHR,
         props.imageCount ?? 3,
+        props.sampleCount ?? 1,
         props.usage ?? VkImageUsageFlags.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         props.compositeAlpha ?? VkCompositeAlphaFlagsKHR.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         prevSwapChain

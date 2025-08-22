@@ -55,6 +55,7 @@ namespace render {
                 void setDstAlphaBlendFactor(BLEND_FACTOR factor);
                 void setAlphaBlendOp(BLEND_OP op);
                 void setColorBlendEnabled(bool enabled);
+                void setSampleCount(u32 sampleCount);
 
                 bool init();
                 void shutdown();
@@ -131,6 +132,7 @@ namespace render {
                 bool m_depthBoundsTestEnabled;
                 bool m_depthWriteEnabled;
                 bool m_colorBlendEnabled;
+                u32 m_sampleCount;
 
                 bool m_viewportDynamic;
                 bool m_scissorDynamic;

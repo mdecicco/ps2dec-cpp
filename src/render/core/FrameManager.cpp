@@ -136,8 +136,22 @@ namespace render {
                 }
 
                 vulkan::Framebuffer* fb = new vulkan::Framebuffer(m_renderPass);
-                fb->attach(m_swapChain->getImageViews()[i], m_swapChain->getFormat());
-                fb->attach(m_swapChain->getDepthBuffers()[i]);
+
+                if (m_swapChain->isMultisampled()) {
+                    // MSAA setup: attach in the order expected by RenderPass
+                    // Attachment 0: MSAA color buffer
+                    fb->attach(m_swapChain->getColorBuffers()[i]);
+                    // Attachment 1: MSAA depth buffer
+                    fb->attach(m_swapChain->getDepthBuffers()[i]);
+                    // Attachment 2: Resolve buffer (swapchain image)
+                    fb->attach(m_swapChain->getResolveBuffers()[i]);
+                } else {
+                    // Non-MSAA setup: traditional attachments
+                    // Attachment 0: Color buffer (swapchain image)
+                    fb->attach(m_swapChain->getColorBuffers()[i]);
+                    // Attachment 1: Depth buffer
+                    fb->attach(m_swapChain->getDepthBuffers()[i]);
+                }
 
                 auto& extent = m_swapChain->getExtent();
                 if (!fb->init(vec2ui(extent.width, extent.height))) {

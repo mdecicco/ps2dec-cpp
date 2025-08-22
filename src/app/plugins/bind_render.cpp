@@ -636,6 +636,9 @@ namespace decomp {
         tspp::describe(b.method("setColorBlendEnabled", &GraphicsPipeline::setColorBlendEnabled))
             .desc("Set the color blend enabled of the graphics pipeline.")
             .param(0, "enabled", "Whether to enable color blend.");
+        tspp::describe(b.method("setSampleCount", &GraphicsPipeline::setSampleCount))
+            .desc("Set the sample count of the graphics pipeline.")
+            .param(0, "sampleCount", "The sample count to set.");
         tspp::describe(b.method("init", &GraphicsPipeline::init)).desc("Initialize the graphics pipeline.");
         tspp::describe(b.method("shutdown", &GraphicsPipeline::shutdown)).desc("Shut down the graphics pipeline");
         tspp::describe(b.method("recreate", &GraphicsPipeline::recreate)).desc("Recreate the graphics pipeline");
@@ -868,6 +871,17 @@ namespace decomp {
         tspp::describe(b.method("init", &RenderPass::init)).desc("Initialize the render pass");
         tspp::describe(b.method("recreate", &RenderPass::recreate)).desc("Recreate the render pass");
         tspp::describe(b.method("shutdown", &RenderPass::shutdown)).desc("Shut down the render pass");
+        tspp::describe(b.method("getSampleCount", &RenderPass::getSampleCount))
+            .desc("Get the sample count of the render pass");
+        tspp::describe(b.method("isMultisampled", &RenderPass::isMultisampled))
+            .desc("Check if the render pass is multisampled");
+        tspp::describe(b.staticMethod("isSampleCountSupported", &RenderPass::isSampleCountSupported))
+            .desc("Check if a sample count is supported")
+            .param(0, "sampleCount", "The sample count to check.")
+            .param(1, "device", "The device to check the sample count for.");
+        tspp::describe(b.staticMethod("getMaxSupportedSampleCount", &RenderPass::getMaxSupportedSampleCount))
+            .desc("Get the maximum supported sample count")
+            .param(0, "device", "The device to get the maximum supported sample count for.");
     }
 
     void bindShaderCompilerInterface() {
@@ -921,8 +935,16 @@ namespace decomp {
             .desc("Get the image views in the swap chain.");
         tspp::describe(b.method("getDepthBuffers", &SwapChain::getDepthBuffers))
             .desc("Get the depth buffers in the swap chain.");
+        tspp::describe(b.method("getColorBuffers", &SwapChain::getColorBuffers))
+            .desc("Get the color buffers in the swap chain.");
+        tspp::describe(b.method("getResolveBuffers", &SwapChain::getResolveBuffers))
+            .desc("Get the resolve buffers in the swap chain.");
         tspp::describe(b.pseudoMethod("getExtent", getExtent)).desc("Get the extent of the swap chain.");
         tspp::describe(b.method("getFormat", &SwapChain::getFormat)).desc("Get the format of the swap chain.");
+        tspp::describe(b.method("getSampleCount", &SwapChain::getSampleCount))
+            .desc("Get the sample count of the swap chain.");
+        tspp::describe(b.method("isMultisampled", &SwapChain::isMultisampled))
+            .desc("Check if the swap chain is multisampled");
         tspp::describe(b.method("init", &SwapChain::init))
             .desc("Initialize the swap chain.")
             .param(0, "surface", "The surface to initialize the swap chain for.")
@@ -932,9 +954,10 @@ namespace decomp {
             .param(4, "colorSpace", "The color space of the swap chain.")
             .param(5, "presentMode", "The present mode of the swap chain.")
             .param(6, "imageCount", "The number of images in the swap chain.")
-            .param(7, "usage", "The usage flags for the swap chain.")
-            .param(8, "compositeAlpha", "The composite alpha flag for the swap chain.")
-            .param(9, "previous", "The previous swap chain to initialize the swap chain for.", true);
+            .param(7, "sampleCount", "The sample count of the swap chain.")
+            .param(8, "usage", "The usage flags for the swap chain.")
+            .param(9, "compositeAlpha", "The composite alpha flag for the swap chain.")
+            .param(10, "previous", "The previous swap chain to initialize the swap chain for.", true);
         tspp::describe(b.method("recreate", &SwapChain::recreate)).desc("Recreate the swap chain.");
         tspp::describe(b.method("shutdown", &SwapChain::shutdown)).desc("Shut down the swap chain.");
     }
@@ -996,7 +1019,8 @@ namespace decomp {
             .param(5, "depth", "The depth of the texture.")
             .param(6, "arrayLayers", "The number of array layers in the texture.")
             .param(7, "usage", "The usage flags for the texture.")
-            .param(8, "layout", "The layout of the texture.");
+            .param(8, "layout", "The layout of the texture.")
+            .param(9, "sampleCount", "The sample count of the texture.");
         tspp::describe(b.method("initSampler", &Texture::initSampler)).desc("Initialize the texture's sampler");
         tspp::describe(b.method("initStagingBuffer", &Texture::initStagingBuffer))
             .desc("Initialize the texture's staging buffer");

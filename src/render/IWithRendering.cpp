@@ -44,7 +44,7 @@ namespace render {
         shutdownRendering();
     }
 
-    bool IWithRendering::initRendering(::decomp::Window* win) {
+    bool IWithRendering::initRendering(::decomp::Window* win, u32 sampleCount) {
         if (m_initialized) {
             return false;
         }
@@ -113,7 +113,7 @@ namespace render {
         }
 
         m_swapChain = new vulkan::SwapChain();
-        if (!setupSwapchain(m_swapChain, scSupport)) {
+        if (!setupSwapchain(m_swapChain, scSupport, sampleCount)) {
             fatal("Client setup for swapchain failed.");
             shutdownRendering();
             return false;
@@ -288,7 +288,9 @@ namespace render {
         return device->init(true, false, false, m_surface);
     }
 
-    bool IWithRendering::setupSwapchain(vulkan::SwapChain* swapChain, const vulkan::SwapChainSupport& support) {
+    bool IWithRendering::setupSwapchain(
+        vulkan::SwapChain* swapChain, const vulkan::SwapChainSupport& support, u32 sampleCount
+    ) {
         return swapChain->init(
             m_surface,
             m_logicalDevice,
@@ -296,7 +298,11 @@ namespace render {
             VK_FORMAT_B8G8R8A8_SRGB,
             VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
             VK_PRESENT_MODE_FIFO_KHR,
-            3
+            3,
+            sampleCount,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+            nullptr
         );
     }
 

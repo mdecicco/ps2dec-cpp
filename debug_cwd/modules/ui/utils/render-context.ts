@@ -167,6 +167,7 @@ export class RenderContext {
             VkColorSpaceKHR.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
             VkPresentModeKHR.VK_PRESENT_MODE_FIFO_KHR,
             3,
+            8,
             VkImageUsageFlags.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             VkCompositeAlphaFlagsKHR.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
             null
@@ -381,7 +382,8 @@ export class RenderContext {
             1,
             1,
             VkImageUsageFlags.VK_IMAGE_USAGE_SAMPLED_BIT,
-            VkImageLayout.VK_IMAGE_LAYOUT_UNDEFINED
+            VkImageLayout.VK_IMAGE_LAYOUT_UNDEFINED,
+            1
         );
 
         if (!textureResult) {

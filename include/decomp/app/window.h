@@ -42,7 +42,9 @@ namespace decomp {
             virtual bool setupInstance(render::vulkan::Instance* instance) override;
             virtual bool setupDevice(render::vulkan::LogicalDevice* device) override;
             virtual bool setupSwapchain(
-                render::vulkan::SwapChain* swapChain, const render::vulkan::SwapChainSupport& support
+                render::vulkan::SwapChain* swapChain,
+                const render::vulkan::SwapChainSupport& support,
+                u32 sampleCount = 1
             ) override;
 
             bool setOpen(bool open);

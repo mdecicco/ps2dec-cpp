@@ -488,7 +488,9 @@ namespace decomp {
         return device->init(true, true, false, getSurface());
     }
 
-    bool Window::setupSwapchain(render::vulkan::SwapChain* swapChain, const render::vulkan::SwapChainSupport& support) {
+    bool Window::setupSwapchain(
+        render::vulkan::SwapChain* swapChain, const render::vulkan::SwapChainSupport& support, u32 sampleCount
+    ) {
         return swapChain->init(
             getSurface(),
             getLogicalDevice(),
@@ -496,7 +498,11 @@ namespace decomp {
             VK_FORMAT_A2B10G10R10_UNORM_PACK32,
             VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
             VK_PRESENT_MODE_FIFO_KHR,
-            3
+            3,
+            sampleCount,
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+            nullptr
         );
     }
 

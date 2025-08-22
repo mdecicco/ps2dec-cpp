@@ -3,6 +3,7 @@
 #include <render/vulkan/Instance.h>
 #include <render/vulkan/LogicalDevice.h>
 #include <render/vulkan/PhysicalDevice.h>
+#include <render/vulkan/RenderPass.h>
 #include <render/vulkan/Texture.h>
 
 namespace render {
@@ -19,6 +20,7 @@ namespace render {
             m_memory          = VK_NULL_HANDLE;
             m_view            = VK_NULL_HANDLE;
             m_sampler         = VK_NULL_HANDLE;
+            m_ownsImage       = true;
         }
 
         Texture::~Texture() {
@@ -98,7 +100,8 @@ namespace render {
             u32 depth,
             u32 arrayLayers,
             VkImageUsageFlags usage,
-            VkImageLayout layout
+            VkImageLayout layout,
+            u32 sampleCount
         ) {
             if (m_image) {
                 return false;
@@ -112,6 +115,7 @@ namespace render {
             m_depth           = depth;
             m_arrayLayerCount = arrayLayers;
             m_dimensions      = vec2ui(width, height);
+            m_ownsImage       = true;
 
             VkImageCreateInfo ii = {};
             ii.sType             = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -121,7 +125,7 @@ namespace render {
             ii.initialLayout     = m_layout;
             ii.usage             = usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
             ii.sharingMode       = VK_SHARING_MODE_EXCLUSIVE;
-            ii.samples           = VK_SAMPLE_COUNT_1_BIT;
+            ii.samples           = RenderPass::sampleCountToVkFlags(sampleCount);
             ii.extent.width      = m_dimensions.x;
             ii.extent.height     = m_dimensions.y;
             ii.extent.depth      = m_depth;
@@ -191,6 +195,66 @@ namespace render {
             return true;
         }
 
+        bool Texture::initFromExistingImage(
+            VkImage existingImage,
+            u32 width,
+            u32 height,
+            VkFormat format,
+            VkImageType type,
+            u32 mipLevels,
+            u32 depth,
+            u32 arrayLayers,
+            VkImageUsageFlags usage,
+            VkImageLayout layout
+        ) {
+            if (m_image) {
+                return false;
+            }
+
+            m_type            = type;
+            m_layout          = layout;
+            m_format          = format;
+            m_formatInfo      = &getFormatInfo(format);
+            m_mipLevels       = mipLevels;
+            m_depth           = depth;
+            m_arrayLayerCount = arrayLayers;
+            m_dimensions      = vec2ui(width, height);
+            m_ownsImage       = false;
+
+            m_image  = existingImage;
+            m_memory = VK_NULL_HANDLE;
+
+            VkImageViewCreateInfo vi           = {};
+            vi.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            vi.image                           = m_image;
+            vi.viewType                        = VK_IMAGE_VIEW_TYPE_2D; // todo
+            vi.format                          = m_format;
+            vi.subresourceRange.baseMipLevel   = 0;
+            vi.subresourceRange.levelCount     = m_mipLevels;
+            vi.subresourceRange.baseArrayLayer = 0;
+            vi.subresourceRange.layerCount     = m_arrayLayerCount;
+
+            switch (format) {
+                case VK_FORMAT_D16_UNORM:
+                case VK_FORMAT_X8_D24_UNORM_PACK32:
+                case VK_FORMAT_D32_SFLOAT:
+                case VK_FORMAT_S8_UINT:
+                case VK_FORMAT_D16_UNORM_S8_UINT:
+                case VK_FORMAT_D24_UNORM_S8_UINT:
+                case VK_FORMAT_D32_SFLOAT_S8_UINT: vi.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; break;
+                default: vi.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; break;
+            }
+
+            if (vkCreateImageView(m_device->get(), &vi, m_device->getInstance()->getAllocator(), &m_view) !=
+                VK_SUCCESS) {
+                m_device->getInstance()->error("Failed to create image view for existing image");
+                shutdown();
+                return false;
+            }
+
+            return true;
+        }
+
         bool Texture::initSampler(VkFilter magFilter, VkFilter minFilter) {
             VkSamplerCreateInfo si     = {};
             si.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -252,13 +316,18 @@ namespace render {
                 m_view = VK_NULL_HANDLE;
             }
 
-            if (m_image) {
-                vkDestroyImage(m_device->get(), m_image, m_device->getInstance()->getAllocator());
-                m_image = VK_NULL_HANDLE;
-            }
+            if (m_ownsImage) {
+                if (m_image) {
+                    vkDestroyImage(m_device->get(), m_image, m_device->getInstance()->getAllocator());
+                    m_image = VK_NULL_HANDLE;
+                }
 
-            if (m_memory) {
-                vkFreeMemory(m_device->get(), m_memory, m_device->getInstance()->getAllocator());
+                if (m_memory) {
+                    vkFreeMemory(m_device->get(), m_memory, m_device->getInstance()->getAllocator());
+                    m_memory = VK_NULL_HANDLE;
+                }
+            } else {
+                m_image  = VK_NULL_HANDLE;
                 m_memory = VK_NULL_HANDLE;
             }
 
@@ -270,6 +339,7 @@ namespace render {
             m_depth           = 1;
             m_arrayLayerCount = 1;
             m_dimensions      = vec2ui(0, 0);
+            m_ownsImage       = true;
         }
 
         void Texture::shutdownStagingBuffer() {

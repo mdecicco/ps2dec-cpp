@@ -24,8 +24,12 @@ namespace render {
                 const Array<VkImage>& getImages() const;
                 const Array<VkImageView>& getImageViews() const;
                 const Array<Texture*>& getDepthBuffers() const;
+                const Array<Texture*>& getColorBuffers() const;
+                const Array<Texture*>& getResolveBuffers() const;
                 const VkExtent2D& getExtent() const;
                 VkFormat getFormat() const;
+                u32 getSampleCount() const;
+                bool isMultisampled() const;
 
                 bool init(
                     Surface* surface,
@@ -35,6 +39,7 @@ namespace render {
                     VkColorSpaceKHR colorSpace,
                     VkPresentModeKHR presentMode,
                     u32 imageCount,
+                    u32 sampleCount                            = 1,
                     VkImageUsageFlags usage                    = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                     VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
                     SwapChain* previous                        = nullptr
@@ -58,7 +63,11 @@ namespace render {
                 Array<VkImage> m_images;
                 Array<VkImageView> m_imageViews;
                 Array<Texture*> m_depthBuffers;
+                Array<Texture*> m_colorBuffers; // MSAA color buffers
+                Array<Texture*>
+                    m_resolveBuffers; // Single-sample resolve targets (same as swapchain images when no MSAA)
                 Array<GraphicsPipeline*> m_pipelines;
+                u32 m_sampleCount;
         };
     };
 };
