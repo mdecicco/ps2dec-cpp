@@ -16,12 +16,6 @@ export class LayoutEngine extends IElementRecursion {
         this.m_root = root;
     }
 
-    updateProportionateSizes(node: Element) {
-        for (const child of node.children) {
-            this.updateProportionateSizes(child);
-        }
-    }
-
     readLayout(node: Element) {
         const prevWidth = node.style.clientRect.width;
         const prevHeight = node.style.clientRect.height;
@@ -58,8 +52,6 @@ export class LayoutEngine extends IElementRecursion {
         this.m_root.style.height = px(windowSize.y);
         this.m_root.style.minHeight = px(windowSize.y);
         this.m_root.style.maxHeight = px(windowSize.y);
-
-        this.updateProportionateSizes(this.m_root);
 
         Yoga.YGNodeCalculateLayout(this.m_root.yogaNode, windowSize.x, windowSize.y, Yoga.YGDirection.YGDirectionLTR);
 
