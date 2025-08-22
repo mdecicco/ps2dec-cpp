@@ -54,3 +54,7 @@ Thumbs.db
 
 # Node modules
 node_modules/
+
+# Compiled javascript
+*.js
+*.js.map
