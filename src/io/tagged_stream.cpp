@@ -1,7 +1,7 @@
 #include <decomp/io/tagged_stream.h>
-#include <decomp/utils/array.hpp>
 #include <decomp/utils/buffer.h>
-#include <decomp/utils/exceptions.h>
+#include <utils/Array.hpp>
+#include <utils/Exception.h>
 
 namespace decomp {
     namespace io {
@@ -163,7 +163,9 @@ namespace decomp {
                 }
             }
 
-            allBlocks.sort([](Block* a, Block* b) { return a->getIndex() < b->getIndex(); });
+            allBlocks.sort([](Block* a, Block* b) {
+                return a->getIndex() < b->getIndex();
+            });
 
             for (auto& block : allBlocks) {
                 u64 prevPos = block->position();

@@ -1,6 +1,6 @@
 #pragma once
 #include <decomp/types.h>
-#include <decomp/utils/string.h>
+#include <utils/String.h>
 
 namespace decomp {
     class IStream {

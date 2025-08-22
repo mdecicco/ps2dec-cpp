@@ -2,9 +2,12 @@
 #include <decomp/types.h>
 #include <decomp/utils/buffer.h>
 
-namespace decomp {
-    class Socket;
+namespace tspp {
+    class WebSocketServer;
+    class WebSocketConnection;
+}
 
+namespace decomp {
     class OutboundPacket : public Buffer {
         public:
             enum class Type : u8 {
@@ -13,7 +16,8 @@ namespace decomp {
                 CommandResponse     = 2
             };
 
-            OutboundPacket(Socket* socket, Type type);
+            OutboundPacket(tspp::WebSocketConnection* connection, Type type);
+            OutboundPacket(tspp::WebSocketServer* socket, Type type);
             virtual ~OutboundPacket();
 
             Type getPacketType() const;
@@ -22,7 +26,8 @@ namespace decomp {
             void send();
 
         private:
-            Socket* m_socket;
+            tspp::WebSocketConnection* m_connection;
+            tspp::WebSocketServer* m_socket;
             bool m_isSent;
             Type m_type;
     };

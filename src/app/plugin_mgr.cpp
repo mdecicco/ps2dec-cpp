@@ -1,8 +1,8 @@
 #include <decomp/app/plugin_mgr.h>
 
 #include <decomp/app/plugin.h>
-#include <decomp/utils/array.hpp>
-#include <decomp/utils/exceptions.h>
+#include <utils/Array.hpp>
+#include <utils/Exception.h>
 
 namespace decomp {
     PluginMgr::PluginMgr(Application* app) : IWithLogging("PluginMgr") {
@@ -105,5 +105,11 @@ namespace decomp {
         }
 
         m_isInitialized = false;
+    }
+
+    void PluginMgr::service() {
+        for (IPlugin* plugin : m_plugins) {
+            plugin->service();
+        }
     }
 }

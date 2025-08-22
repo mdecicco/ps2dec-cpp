@@ -4,7 +4,7 @@
 
 namespace decomp {
     namespace packet {
-        ClientCommand::ClientCommand(cmd::ICommand* command, Socket* socket)
+        ClientCommand::ClientCommand(cmd::ICommand* command, tspp::WebSocketServer* socket)
             : OutboundPacket(socket, Type::ClientCommand) {
             command->serialize(*this);
         }

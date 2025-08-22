@@ -3,13 +3,12 @@
 
 #include <decomp/types.h>
 
-#include <decomp/comm/socket.h>
-#include <decomp/utils/array.hpp>
 #include <decomp/utils/buffer.h>
 #include <decomp/utils/cli.h>
 #include <decomp/utils/cli_options.h>
-#include <decomp/utils/exceptions.h>
-#include <decomp/utils/string.h>
+#include <utils/Array.hpp>
+#include <utils/Exception.h>
+#include <utils/String.h>
 
 #include <decomp/app/application.h>
 #include <decomp/app/options.h>

@@ -1,7 +1,7 @@
 #pragma once
 #include <decomp/types.h>
 #include <decomp/utils/args.h>
-#include <decomp/utils/array.h>
+#include <utils/Array.h>
 
 namespace decomp {
     class ICommandOption;
@@ -24,8 +24,8 @@ namespace decomp {
                 const String& name,
                 const String& description,
                 const String& defaultValue = String(),
-                i32 minValue = INT32_MIN,
-                i32 maxValue = INT32_MAX
+                i32 minValue               = INT32_MIN,
+                i32 maxValue               = INT32_MAX
             );
 
             void addFloatOption(
@@ -33,8 +33,8 @@ namespace decomp {
                 const String& name,
                 const String& description,
                 const String& defaultValue = String(),
-                f32 minValue = FLT_MIN,
-                f32 maxValue = FLT_MAX
+                f32 minValue               = FLT_MIN,
+                f32 maxValue               = FLT_MAX
             );
 
             void parse(const Arguments& args);

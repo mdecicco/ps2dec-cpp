@@ -50,4 +50,7 @@ Thumbs.db
 # Executables
 *.exe
 *.out
-*.app 
+*.app
+
+# Node modules
+node_modules/

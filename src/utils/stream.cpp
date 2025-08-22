@@ -1,7 +1,7 @@
 #include <decomp/utils/stream.h>
 
 #include <decomp/utils/buffer.h>
-#include <decomp/utils/exceptions.h>
+#include <utils/Exception.h>
 
 namespace decomp {
     void IStream::read(void* buffer, u64 size) {

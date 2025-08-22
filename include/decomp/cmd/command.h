@@ -1,12 +1,15 @@
 #pragma once
 #include <decomp/types.h>
 
-#include <decomp/utils/array.h>
+#include <utils/Array.h>
+
+namespace tspp {
+    class WebSocketConnection;
+}
 
 namespace decomp {
     class Buffer;
     class Application;
-    class Socket;
 
     namespace packet {
         class CommandResponse;
@@ -67,7 +70,7 @@ namespace decomp {
 
                 void commit();
                 void rollback();
-                void initializeResponse(Socket* socket);
+                void initializeResponse(tspp::WebSocketConnection* connection);
                 void sendResponse();
 
                 virtual void generateResponse();

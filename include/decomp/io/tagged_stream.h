@@ -1,7 +1,7 @@
 #pragma once
 #include <decomp/types.h>
-#include <decomp/utils/array.h>
 #include <decomp/utils/stream.hpp>
+#include <utils/Array.h>
 
 #include <unordered_map>
 

@@ -7,9 +7,9 @@
 
 #include <decomp/app/application.h>
 
-#include <decomp/utils/array.hpp>
 #include <decomp/utils/buffer.h>
-#include <decomp/utils/exceptions.h>
+#include <utils/Array.hpp>
+#include <utils/Exception.h>
 
 namespace decomp {
     namespace cmd {
@@ -72,7 +72,9 @@ namespace decomp {
                 throw InvalidActionException("Command::resolveCommit() - Command is not committing");
             }
 
-            i64 index = m_pendingListeners.findIndex([listener](ICommandListener* l) { return l == listener; });
+            i64 index = m_pendingListeners.findIndex([listener](ICommandListener* l) {
+                return l == listener;
+            });
             if (index == -1) {
                 throw InvalidActionException("Command::resolveCommit() - Listener not pending");
             }
@@ -96,7 +98,9 @@ namespace decomp {
                 throw InvalidActionException("Command::rejectCommit() - Command is not committing");
             }
 
-            i64 index = m_pendingListeners.findIndex([listener](ICommandListener* l) { return l == listener; });
+            i64 index = m_pendingListeners.findIndex([listener](ICommandListener* l) {
+                return l == listener;
+            });
             if (index == -1) {
                 throw InvalidActionException("Command::rejectCommit() - Listener not pending");
             }
@@ -118,7 +122,9 @@ namespace decomp {
                 throw InvalidActionException("Command::resolveRollback() - Command is not rolling back");
             }
 
-            i64 index = m_pendingListeners.findIndex([listener](ICommandListener* l) { return l == listener; });
+            i64 index = m_pendingListeners.findIndex([listener](ICommandListener* l) {
+                return l == listener;
+            });
             if (index == -1) {
                 throw InvalidActionException("Command::resolveRollback() - Listener not pending");
             }
@@ -138,7 +144,9 @@ namespace decomp {
                 throw InvalidActionException("Command::rejectRollback() - Command is not rolling back");
             }
 
-            i64 index = m_pendingListeners.findIndex([listener](ICommandListener* l) { return l == listener; });
+            i64 index = m_pendingListeners.findIndex([listener](ICommandListener* l) {
+                return l == listener;
+            });
             if (index == -1) {
                 throw InvalidActionException("Command::rejectRollback() - Listener not pending");
             }
@@ -314,7 +322,7 @@ namespace decomp {
             }
         }
 
-        void ICommand::initializeResponse(Socket* socket) {
+        void ICommand::initializeResponse(tspp::WebSocketConnection* connection) {
             if (m_response != nullptr) {
                 throw InvalidActionException("Command::initializeResponse() - Command already has a response handler");
             }
@@ -323,7 +331,7 @@ namespace decomp {
                 throw InvalidActionException("Command::initializeResponse() - Command has no id");
             }
 
-            m_response = new packet::CommandResponse(m_commandId, socket);
+            m_response = new packet::CommandResponse(m_commandId, connection);
         }
 
         void ICommand::sendResponse() {

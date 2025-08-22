@@ -1,6 +1,6 @@
 #pragma once
 #include <decomp/cmd/command.h>
-#include <decomp/utils/logging.h>
+#include <utils/interfaces/IWithLogging.h>
 
 namespace decomp {
     namespace cmd {

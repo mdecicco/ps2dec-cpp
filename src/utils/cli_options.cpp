@@ -1,6 +1,6 @@
-#include <decomp/utils/array.hpp>
 #include <decomp/utils/cli_options.h>
-#include <decomp/utils/exceptions.h>
+#include <utils/Array.hpp>
+#include <utils/Exception.h>
 
 namespace decomp {
     ICommandOption::ICommandOption(const String& name, const String& description, const String& defaultValue)

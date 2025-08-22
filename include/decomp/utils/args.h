@@ -1,7 +1,7 @@
 #pragma once
 #include <decomp/types.h>
-#include <decomp/utils/string.h>
 #include <unordered_map>
+#include <utils/String.h>
 
 namespace decomp {
     struct Argument {

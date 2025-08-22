@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "module": "AMD",
+        "target": "ES2017",
+        "moduleResolution": "node",
+        "strict": true,
+        "noEmitOnError": true,
+        "noImplicitAny": true,
+        "noLib": true,
+        "jsx": "react",
+        "rootDir": "./",
+        "baseUrl": "./modules",
+        "sourceRoot": "./",
+        "outFile": "./build.js",
+        "sourceMap": true,
+        "typeRoots": ["./internal/lib"],
+        "types": ["v8", "core", "builtins"],
+        "skipLibCheck": true,
+        "skipDefaultLibCheck": true
+    },
+    "include": ["**/*.ts", "**/*.tsx"]
+}

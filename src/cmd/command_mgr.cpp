@@ -4,10 +4,9 @@
 #include <decomp/cmd/cmd_shutdown.h>
 #include <decomp/cmd/command_listener.h>
 #include <decomp/comm/packets/client_command.h>
-#include <decomp/comm/socket.h>
-#include <decomp/utils/array.hpp>
 #include <decomp/utils/buffer.h>
-#include <decomp/utils/exceptions.h>
+#include <utils/Array.hpp>
+#include <utils/Exception.h>
 
 namespace decomp {
     namespace cmd {
@@ -139,7 +138,9 @@ namespace decomp {
 
         void CommandMgr::unsubscribeFromAll(ICommandListener* listener) {
             for (CommandInfo& cmd : m_registeredCommands) {
-                i64 index = cmd.listeners.findIndex([listener](ICommandListener* l) { return l == listener; });
+                i64 index = cmd.listeners.findIndex([listener](ICommandListener* l) {
+                    return l == listener;
+                });
                 if (index == -1) {
                     continue;
                 }

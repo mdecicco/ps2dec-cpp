@@ -1,6 +1,6 @@
 #include <decomp/io/file.h>
 #include <decomp/utils/buffer.h>
-#include <decomp/utils/exceptions.h>
+#include <utils/Exception.h>
 
 namespace decomp {
     namespace io {
@@ -12,13 +12,14 @@ namespace decomp {
         }
 
         File* File::open(const String& path, const char* mode) {
-            struct stat fstat;
-            if (stat(path.c_str(), &fstat) != 0) {
+            FILE* fp = fopen(path.c_str(), mode);
+            if (!fp) {
                 return nullptr;
             }
 
-            FILE* fp = fopen(path.c_str(), mode);
-            if (!fp) {
+            struct stat fstat;
+            if (stat(path.c_str(), &fstat) != 0) {
+                fclose(fp);
                 return nullptr;
             }
 

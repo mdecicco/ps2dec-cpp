@@ -3,9 +3,11 @@
 
 #include <decomp/comm/outbound_packet.h>
 
-namespace decomp {
-    class Socket;
+namespace tspp {
+    class WebSocketServer;
+}
 
+namespace decomp {
     namespace cmd {
         enum class CommandState : u8;
     }
@@ -13,7 +15,7 @@ namespace decomp {
     namespace packet {
         class CommandStateChanged : public OutboundPacket {
             public:
-                CommandStateChanged(u32 commandId, cmd::CommandState state, Socket* socket);
+                CommandStateChanged(u32 commandId, cmd::CommandState state, tspp::WebSocketServer* socket);
         };
     }
 }

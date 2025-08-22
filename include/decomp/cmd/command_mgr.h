@@ -1,8 +1,8 @@
 #pragma once
 #include <decomp/types.h>
 
-#include <decomp/utils/array.h>
-#include <decomp/utils/logging.h>
+#include <utils/Array.h>
+#include <utils/interfaces/IWithLogging.h>
 
 namespace decomp {
     class Application;

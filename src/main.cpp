@@ -1,8 +1,7 @@
 #include <decomp/decomp.h>
 #include <iostream>
 
-#include <decomp/io/file.h>
-#include <decomp/io/tagged_stream.h>
+#include <render/utils/AlignedAllocator.h>
 
 void printHelp(const decomp::CommandLineInterface& cli) {
     std::cout << "Usage: decomp [options]" << std::endl;

@@ -1,8 +1,8 @@
 #pragma once
 #include <decomp/types.h>
 
-#include <decomp/utils/logging.h>
-#include <decomp/utils/string.h>
+#include <utils/String.h>
+#include <utils/interfaces/IWithLogging.h>
 
 namespace decomp {
     class IPlugin : public IWithLogging {
@@ -18,6 +18,7 @@ namespace decomp {
 
             virtual void initPlugin();
             virtual void shutdownPlugin();
+            virtual void service();
 
             bool m_isInitialized;
     };

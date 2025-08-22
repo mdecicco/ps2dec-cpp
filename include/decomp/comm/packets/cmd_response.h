@@ -4,12 +4,10 @@
 #include <decomp/comm/outbound_packet.h>
 
 namespace decomp {
-    class Socket;
-
     namespace packet {
         class CommandResponse : public OutboundPacket {
             public:
-                CommandResponse(u32 commandId, Socket* socket);
+                CommandResponse(u32 commandId, tspp::WebSocketConnection* connection);
 
                 u32 getCommandId() const;
 

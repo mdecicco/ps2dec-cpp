@@ -1,5 +1,6 @@
 #pragma once
-#include <decomp/utils/logging.h>
+#include <decomp/types.h>
+#include <utils/interfaces/IWithLogging.h>
 
 namespace decomp {
     class IPlugin;
@@ -12,6 +13,7 @@ namespace decomp {
 
             void init();
             void shutdown();
+            void service();
 
             template <typename T, typename... Args>
             void addPlugin(Args&&... args);

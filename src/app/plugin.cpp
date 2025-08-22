@@ -16,4 +16,6 @@ namespace decomp {
     void IPlugin::initPlugin() {}
 
     void IPlugin::shutdownPlugin() {}
+
+    void IPlugin::service() {}
 }

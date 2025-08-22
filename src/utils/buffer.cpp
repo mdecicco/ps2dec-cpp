@@ -1,6 +1,6 @@
 #include <decomp/utils/buffer.h>
-#include <decomp/utils/exceptions.h>
-#include <decomp/utils/string.h>
+#include <utils/Exception.h>
+#include <utils/String.h>
 
 namespace decomp {
     Buffer::Buffer() {

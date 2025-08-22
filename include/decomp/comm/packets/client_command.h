@@ -2,9 +2,11 @@
 #include <decomp/comm/outbound_packet.h>
 #include <decomp/types.h>
 
-namespace decomp {
-    class Socket;
+namespace tspp {
+    class WebSocketServer;
+}
 
+namespace decomp {
     namespace cmd {
         class ICommand;
     }
@@ -12,7 +14,7 @@ namespace decomp {
     namespace packet {
         class ClientCommand : public OutboundPacket {
             public:
-                ClientCommand(cmd::ICommand* command, Socket* socket);
+                ClientCommand(cmd::ICommand* command, tspp::WebSocketServer* socket);
         };
     }
 }

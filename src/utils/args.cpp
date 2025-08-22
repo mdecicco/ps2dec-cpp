@@ -1,6 +1,6 @@
 #include <decomp/utils/args.h>
-#include <decomp/utils/array.hpp>
-#include <decomp/utils/string.h>
+#include <utils/Array.hpp>
+#include <utils/String.h>
 
 namespace decomp {
     Arguments::Arguments() : m_argc(0), m_argv(nullptr) {}
@@ -12,7 +12,7 @@ namespace decomp {
         if (argc == 0) {
             return;
         }
-        m_path = argv[0];
+        m_path        = argv[0];
         String argStr = "";
         for (u32 i = 1; i < argc; i++) {
             if (i > 1) {
@@ -21,14 +21,16 @@ namespace decomp {
             argStr += argv[i];
         }
 
-        Array<String> comps = argStr.split("-", "''\"\"``").filter([](const String& s) { return s.size() > 0; });
+        Array<String> comps = argStr.split("-", "''\"\"``").filter([](const String& s) {
+            return s.size() > 0;
+        });
         Array<String> arg(2);
 
         for (u32 i = 0; i < comps.size(); i++) {
             arg = comps[i].split(" ", nullptr, 1);
 
             if (arg.size() == 2) {
-                String val = arg[1].trim();
+                String val     = arg[1].trim();
                 m_args[arg[0]] = val;
             } else {
                 m_args[arg[0]] = "";

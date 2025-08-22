@@ -2,8 +2,8 @@
 #include <decomp/cmd/command_listener.h>
 #include <decomp/cmd/command_mgr.h>
 
-#include <decomp/utils/array.hpp>
-#include <decomp/utils/exceptions.h>
+#include <utils/Array.hpp>
+#include <utils/Exception.h>
 
 namespace decomp {
     namespace cmd {
@@ -92,7 +92,9 @@ namespace decomp {
                     continue;
                 }
 
-                i64 index = cmd.listeners.findIndex([listener](ICommandListener* l) { return l == listener; });
+                i64 index = cmd.listeners.findIndex([listener](ICommandListener* l) {
+                    return l == listener;
+                });
                 if (index == -1) {
                     throw InvalidActionException("CommandMgr::unsubscribeCommandListener() - Listener not subscribed");
                 }

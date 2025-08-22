@@ -1,15 +1,16 @@
 #include <decomp/app/application.h>
 #include <decomp/app/logger.h>
 #include <decomp/app/plugin_mgr.hpp>
-
+#include <decomp/app/plugins/scripting.h>
+#include <decomp/app/window.h>
 #include <decomp/cmd/cmd_shutdown.h>
 #include <decomp/cmd/command.h>
 #include <decomp/cmd/command_mgr.hpp>
-
-#include <decomp/comm/socket.h>
-#include <decomp/comm/socket_listener.h>
 #include <decomp/utils/buffer.h>
-#include <decomp/utils/exceptions.h>
+#include <decomp/utils/event.hpp>
+
+#include <utils/Array.hpp>
+#include <utils/Exception.h>
 
 #include <chrono>
 #include <iostream>
@@ -24,8 +25,8 @@ namespace decomp {
         m_logger = new AppLogger(this);
         subscribeLogListener(m_logger);
 
-        m_socket = new Socket(m_options);
-        m_socket->setListener(this);
+        m_socket = new tspp::WebSocketServer(m_options.websocketPort);
+        m_socket->addListener(this);
         addNestedLogger(m_socket);
 
         m_pluginMgr = new PluginMgr(this);
@@ -44,11 +45,27 @@ namespace decomp {
         delete m_logger;
     }
 
+    void Application::addWindow(Window* window) {
+        m_windows.push(window);
+        addNestedLogger(window);
+    }
+
+    void Application::removeWindow(Window* window) {
+        i64 index = m_windows.findIndex([window](Window* w) {
+            return w == window;
+        });
+
+        if (index != -1) {
+            m_windows.remove(index);
+            removeNestedLogger(window);
+        }
+    }
+
     const ApplicationOptions& Application::getOptions() const {
         return m_options;
     }
 
-    Socket* Application::getSocket() const {
+    tspp::WebSocketServer* Application::getSocket() const {
         return m_socket;
     }
 
@@ -68,13 +85,25 @@ namespace decomp {
         m_isRunning = true;
 
         try {
+            m_pluginMgr->addPlugin<ScriptingPlugin>(this);
+
             m_commandMgr->subscribeCommandListener<cmd::CmdShutdown>(this);
             m_pluginMgr->init();
             m_socket->open();
 
+            m_onInitializedDispatcher.dispatch(onInitialized);
+
             while (m_socket->isOpen()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                m_pluginMgr->service();
+
+                for (Window* window : m_windows) {
+                    window->pollEvents();
+                }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 m_socket->processEvents();
+
+                m_onServiceDispatcher.dispatch(onService);
 
                 if (m_shutdownRequested) {
                     Duration msSinceShutdownRequested = Clock::now() - m_shutdownRequestedAt;
@@ -83,6 +112,14 @@ namespace decomp {
                         log("Shutting down");
                         m_socket->close();
                     }
+                }
+            }
+
+            bool stillProcessing = true;
+            while (stillProcessing) {
+                stillProcessing = false;
+                for (Window* window : m_windows) {
+                    stillProcessing |= window->pollEvents();
                 }
             }
         } catch (const GenericException& e) {
@@ -112,23 +149,27 @@ namespace decomp {
         log("Shutdown requested");
 
         command->resolveCommit(this);
+        m_onShutdownRequestedDispatcher.dispatch(onShutdownRequested);
     }
 
-    void Application::onMessage(Buffer& buffer) {
+    void Application::onMessage(tspp::WebSocketConnection* connection, const void* data, u64 size) {
         try {
-            cmd::ICommand* command = cmd::ICommand::deserialize(buffer, false, this);
-            command->initializeResponse(m_socket);
+            Buffer buf;
+            buf.write(data, size);
+
+            cmd::ICommand* command = cmd::ICommand::deserialize(buf, false, this);
+            command->initializeResponse(connection);
             m_commandMgr->submit(command);
         } catch (const std::exception& e) {
             error("Caught exception while deserializing command: %s", e.what());
         }
     }
 
-    void Application::onConnectionEstablished() {
+    void Application::onConnect(tspp::WebSocketConnection* connection) {
         log("Connection established");
     }
 
-    void Application::onConnectionClosed() {
+    void Application::onDisconnect(tspp::WebSocketConnection* connection) {
         log("Connection closed");
     }
 }

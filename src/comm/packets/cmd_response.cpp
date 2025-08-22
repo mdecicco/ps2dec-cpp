@@ -1,12 +1,9 @@
 #include <decomp/comm/packets/cmd_response.h>
 
-#include <decomp/comm/socket.h>
-#include <decomp/utils/exceptions.h>
-
 namespace decomp {
     namespace packet {
-        CommandResponse::CommandResponse(u32 commandId, Socket* socket)
-            : OutboundPacket(socket, Type::CommandResponse) {
+        CommandResponse::CommandResponse(u32 commandId, tspp::WebSocketConnection* connection)
+            : OutboundPacket(connection, Type::CommandResponse) {
             m_commandId = commandId;
 
             write(commandId);
