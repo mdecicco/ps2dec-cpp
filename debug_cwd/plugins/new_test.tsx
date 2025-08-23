@@ -4,21 +4,42 @@ import { Window } from 'window';
 import { WindowProvider } from 'components';
 import PluginManager from 'plugin-manager';
 import { IPlugin } from 'plugin';
-import { Box, BoxProps, createRoot } from 'ui';
+import { Box, BoxProps, createRoot, Geometry, StyleProps } from 'ui';
 import { FaChevronDown, FaChevronUp, FaFaceSmile, FaTruck } from 'font-awesome-solid';
+import { useInterpolatedState } from 'hooks';
 
 const HoverBox: React.FC<BoxProps> = props => {
     const [isHovered, setIsHovered] = React.useState(false);
+    const [boxSize, setBoxSize, boxAnim] = useInterpolatedState(1, {
+        duration: 1000,
+        initialTarget: 50
+    });
     const { style, children, ...rest } = props;
 
-    const boxStyle = {
+    const boxStyle: StyleProps = {
         ...style,
+        overflow: 'scroll',
         backgroundColor: isHovered ? 'rgb(51, 51, 51)' : 'rgb(27, 27, 27)'
     };
+
+    boxAnim.onComplete(v => {
+        setBoxSize(v === 1 ? 50 : 1);
+    });
 
     return (
         <Box {...rest} style={boxStyle} onMouseEnter={e => setIsHovered(true)} onMouseLeave={e => setIsHovered(false)}>
             {children}
+            <Geometry
+                vertices={[
+                    { position: { x: 0, y: 0 } },
+                    { position: { x: boxSize, y: 0 } },
+                    { position: { x: boxSize, y: boxSize } },
+                    { position: { x: 0, y: 0 } },
+                    { position: { x: boxSize, y: boxSize } },
+                    { position: { x: 0, y: boxSize } }
+                ]}
+                version={boxSize}
+            />
         </Box>
     );
 };
@@ -68,6 +89,117 @@ const Test: React.FC = () => {
     );
 };
 
+const Test1: React.FC = () => {
+    return (
+        <Box
+            style={{
+                width: '100%',
+                height: '100%',
+                paddingTop: '10px',
+                paddingRight: '10px',
+                paddingBottom: '10px',
+                paddingLeft: '10px',
+                alignItems: 'stretch',
+                gap: '10px',
+                backgroundColor: 'rgb(0, 0, 0)'
+            }}
+        >
+            <Box
+                style={{
+                    flex: 1,
+                    gap: '10px',
+                    alignItems: 'stretch',
+                    flexDirection: 'column'
+                }}
+            >
+                <HoverBox
+                    style={{
+                        flex: 1,
+                        borderRadius: '5px',
+                        borderTopLeftRadius: '30px',
+                        fontFamily: 'FontAwesome',
+                        color: '#ffffff',
+                        fontSize: '24px',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: '0.1rem'
+                    }}
+                >
+                    {FaChevronDown}
+                    {FaFaceSmile}
+                    {FaTruck}
+                    {FaChevronUp}
+                </HoverBox>
+                <HoverBox style={{ flex: 1, borderRadius: '5px' }} />
+                <HoverBox
+                    style={{
+                        flex: 1,
+                        borderRadius: '5px',
+                        borderBottomLeftRadius: '30px'
+                    }}
+                />
+            </Box>
+            <Box
+                style={{
+                    flex: 1,
+                    gap: '10px',
+                    alignItems: 'stretch',
+                    flexDirection: 'column'
+                }}
+            >
+                <HoverBox style={{ flex: 1, borderRadius: '5px' }} />
+                <Test />
+                <HoverBox style={{ flex: 1, borderRadius: '5px' }} />
+            </Box>
+            <Box
+                style={{
+                    flex: 1,
+                    gap: '10px',
+                    alignItems: 'stretch',
+                    flexDirection: 'column'
+                }}
+            >
+                <HoverBox
+                    style={{
+                        flex: 1,
+                        borderRadius: '5px',
+                        borderTopRightRadius: '30px'
+                    }}
+                />
+                <HoverBox style={{ flex: 1, borderRadius: '5px' }} />
+                <HoverBox
+                    style={{
+                        flex: 1,
+                        borderRadius: '5px',
+                        borderBottomRightRadius: '30px'
+                    }}
+                />
+            </Box>
+        </Box>
+    );
+};
+
+const Test2: React.FC = () => {
+    return (
+        <Box
+            style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'rgb(92, 92, 92)',
+                color: 'rgb(37, 37, 37)',
+                overflow: 'scroll',
+                fontSize: `24px`
+            }}
+        >
+            Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem
+            placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar
+            vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc
+            posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra
+            inceptos himenaeos.
+        </Box>
+    );
+};
+
 class NewTestPlugin extends IPlugin {
     constructor() {
         super('NewTestPlugin');
@@ -97,91 +229,7 @@ class NewTestPlugin extends IPlugin {
 
         root.render(
             <WindowProvider window={window} open={true}>
-                <Box
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        paddingTop: '10px',
-                        paddingRight: '10px',
-                        paddingBottom: '10px',
-                        paddingLeft: '10px',
-                        alignItems: 'stretch',
-                        gap: '10px',
-                        backgroundColor: 'rgb(0, 0, 0)'
-                    }}
-                >
-                    <Box
-                        style={{
-                            flex: 1,
-                            gap: '10px',
-                            alignItems: 'stretch',
-                            flexDirection: 'column'
-                        }}
-                    >
-                        <HoverBox
-                            style={{
-                                flex: 1,
-                                borderRadius: '5px',
-                                borderTopLeftRadius: '30px',
-                                fontFamily: 'FontAwesome',
-                                color: '#ffffff',
-                                fontSize: '24px',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                gap: '0.1rem'
-                            }}
-                        >
-                            {FaChevronDown}
-                            {FaFaceSmile}
-                            {FaTruck}
-                            {FaChevronUp}
-                        </HoverBox>
-                        <HoverBox style={{ flex: 1, borderRadius: '5px' }} />
-                        <HoverBox
-                            style={{
-                                flex: 1,
-                                borderRadius: '5px',
-                                borderBottomLeftRadius: '30px'
-                            }}
-                        />
-                    </Box>
-                    <Box
-                        style={{
-                            flex: 1,
-                            gap: '10px',
-                            alignItems: 'stretch',
-                            flexDirection: 'column'
-                        }}
-                    >
-                        <HoverBox style={{ flex: 1, borderRadius: '5px' }} />
-                        <Test />
-                        <HoverBox style={{ flex: 1, borderRadius: '5px' }} />
-                    </Box>
-                    <Box
-                        style={{
-                            flex: 1,
-                            gap: '10px',
-                            alignItems: 'stretch',
-                            flexDirection: 'column'
-                        }}
-                    >
-                        <HoverBox
-                            style={{
-                                flex: 1,
-                                borderRadius: '5px',
-                                borderTopRightRadius: '30px'
-                            }}
-                        />
-                        <HoverBox style={{ flex: 1, borderRadius: '5px' }} />
-                        <HoverBox
-                            style={{
-                                flex: 1,
-                                borderRadius: '5px',
-                                borderBottomRightRadius: '30px'
-                            }}
-                        />
-                    </Box>
-                </Box>
+                <Test2 />
             </WindowProvider>
         );
     }

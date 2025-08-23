@@ -37,9 +37,15 @@ namespace decomp {
                     CallbackType callback;
                     bool justOnce;
                     bool isTsppCallback;
+                    Listener* next;
+                    Listener* prev;
             };
 
-            Array<Listener> m_listeners;
+            void removeListener(Listener* listener);
+
+            Listener* m_listeners;
+            Listener* m_lastListener;
+
             EventListenerId m_nextId;
     };
 

@@ -3,7 +3,9 @@ import { Window } from 'window';
 
 import { Element } from '../renderer/element';
 import { ClientRect, Overflow } from '../types/style';
+import { TextNode } from '../types/text-node';
 import { KeyboardEvent, MouseEvent, UIEvent, WheelEvent } from '../types/events';
+import { getScrollBarHandles } from './box-geometry';
 
 function pointInClipRect(pos: vec2, rect: ClientRect): boolean {
     if (pos.x < rect.left || pos.x > rect.right) return false;
@@ -36,6 +38,12 @@ function pointInClipRect(pos: vec2, rect: ClientRect): boolean {
         if (diff.lengthSq > rect.bottomLeftRadius * rect.bottomLeftRadius) return false;
     }
 
+    return true;
+}
+
+function pointInBox(pos: vec2, x: f32, y: f32, width: f32, height: f32): boolean {
+    if (pos.x < x || pos.x > x + width) return false;
+    if (pos.y < y || pos.y > y + height) return false;
     return true;
 }
 
@@ -288,6 +296,135 @@ export class UIEventManager {
         element.dispatch('focus', new UIEvent(element));
     }
 
+    private processScrollBarOnMouseMove(element: Element, pos: vec2) {
+        if (element.source instanceof TextNode) {
+            // Text nodes don't have scroll bars, check the parent
+            if (!element.parent) return false;
+            element = element.parent;
+        }
+
+        const scrollBarHandles = getScrollBarHandles(element);
+        if (!scrollBarHandles) {
+            if (element.rendererState.horizontalScrollBarHovered || element.rendererState.verticalScrollBarHovered) {
+                element.rendererState.horizontalScrollBarHovered = false;
+                element.rendererState.verticalScrollBarHovered = false;
+                element.treeNode.root.enqueueForRender(element.treeNode);
+            }
+
+            return false;
+        }
+
+        const { horizontal, vertical } = scrollBarHandles;
+
+        if (element.rendererState.horizontalScrollBarDragStart) {
+            const delta = new vec2();
+            vec2.sub(delta, pos, element.rendererState.horizontalScrollBarDragStart);
+            element.scrollX =
+                element.rendererState.horizontalScrollValueStart +
+                delta.x * element.rendererState.horizontalScrollBarDragMultiplier;
+            element.treeNode.root.enqueueForRender(element.treeNode);
+            return true;
+        }
+
+        if (element.rendererState.verticalScrollBarDragStart) {
+            const delta = new vec2();
+            vec2.sub(delta, pos, element.rendererState.verticalScrollBarDragStart);
+            element.scrollY =
+                element.rendererState.verticalScrollValueStart +
+                delta.y * element.rendererState.verticalScrollBarDragMultiplier;
+            element.treeNode.root.enqueueForRender(element.treeNode);
+            return true;
+        }
+
+        if (horizontal && pointInBox(pos, horizontal.x, horizontal.y, horizontal.width, horizontal.height)) {
+            if (element.rendererState.horizontalScrollBarHovered) return true;
+
+            element.rendererState.horizontalScrollBarHovered = true;
+            element.treeNode.root.enqueueForRender(element.treeNode);
+            return true;
+        }
+
+        if (element.rendererState.horizontalScrollBarHovered) {
+            element.rendererState.horizontalScrollBarHovered = false;
+            element.treeNode.root.enqueueForRender(element.treeNode);
+        }
+
+        if (vertical && pointInBox(pos, vertical.x, vertical.y, vertical.width, vertical.height)) {
+            if (element.rendererState.verticalScrollBarHovered) return true;
+
+            element.rendererState.verticalScrollBarHovered = true;
+            element.treeNode.root.enqueueForRender(element.treeNode);
+            return true;
+        }
+
+        if (element.rendererState.verticalScrollBarHovered) {
+            element.rendererState.verticalScrollBarHovered = false;
+            element.treeNode.root.enqueueForRender(element.treeNode);
+        }
+
+        return false;
+    }
+
+    private processScrollBarOnMouseDown(element: Element, pos: vec2) {
+        if (element.source instanceof TextNode) {
+            // Text nodes don't have scroll bars, check the parent
+            if (!element.parent) return false;
+            element = element.parent;
+        }
+
+        const scrollBarHandles = getScrollBarHandles(element);
+        if (!scrollBarHandles) return false;
+
+        const { horizontal, vertical } = scrollBarHandles;
+        if (horizontal && element.rendererState.horizontalScrollBarHovered) {
+            element.rendererState.horizontalScrollBarDragStart = new vec2(pos.x, pos.y);
+            element.rendererState.horizontalScrollValueStart = element.scrollX;
+            element.rendererState.horizontalScrollBarDragMultiplier = horizontal.scrollOffsetPerHandlePixel;
+            element.treeNode.root.enqueueForRender(element.treeNode);
+            return true;
+        }
+
+        if (vertical && element.rendererState.verticalScrollBarHovered) {
+            element.rendererState.verticalScrollBarDragStart = new vec2(pos.x, pos.y);
+            element.rendererState.verticalScrollValueStart = element.scrollY;
+            element.rendererState.verticalScrollBarDragMultiplier = vertical.scrollOffsetPerHandlePixel;
+            element.treeNode.root.enqueueForRender(element.treeNode);
+            return true;
+        }
+
+        return false;
+    }
+
+    private processScrollBarOnMouseUp(element: Element, pos: vec2) {
+        if (element.source instanceof TextNode) {
+            // Text nodes don't have scroll bars, check the parent
+            if (!element.parent) return false;
+            element = element.parent;
+        }
+
+        const scrollBarHandles = getScrollBarHandles(element);
+        if (!scrollBarHandles) return false;
+
+        const { horizontal, vertical } = scrollBarHandles;
+        if (horizontal && element.rendererState.horizontalScrollBarDragStart) {
+            element.rendererState.horizontalScrollBarDragStart = null;
+            element.rendererState.horizontalScrollValueStart = 0;
+            const isHovered = pointInBox(pos, horizontal.x, horizontal.y, horizontal.width, horizontal.height);
+            element.rendererState.horizontalScrollBarHovered = isHovered;
+            element.treeNode.root.enqueueForRender(element.treeNode);
+            return isHovered;
+        }
+
+        if (vertical && element.rendererState.verticalScrollBarDragStart) {
+            element.rendererState.verticalScrollBarDragStart = null;
+            element.rendererState.verticalScrollValueStart = 0;
+            const isHovered = pointInBox(pos, vertical.x, vertical.y, vertical.width, vertical.height);
+            element.rendererState.verticalScrollBarHovered = isHovered;
+            element.treeNode.root.enqueueForRender(element.treeNode);
+            return isHovered;
+        }
+    }
+
     private onMouseMove(x: f32, y: f32) {
         const pos = new vec2(x, y);
         const deltaPos = this.getDeltaPos(pos);
@@ -298,6 +435,8 @@ export class UIEventManager {
         if (!this.m_tree) return;
         const element = this.elementAt(pos) || this.m_tree;
         const relPos = this.getRelativePos(element, pos);
+
+        if (this.processScrollBarOnMouseMove(element, pos)) return;
 
         const shiftKey = this.m_keysDown.has(KeyboardKey.LeftShift) || this.m_keysDown.has(KeyboardKey.RightShift);
         const ctrlKey = this.m_keysDown.has(KeyboardKey.LeftControl) || this.m_keysDown.has(KeyboardKey.RightControl);
@@ -353,11 +492,13 @@ export class UIEventManager {
 
         if (!this.m_tree) return;
 
+        const element = this.elementAt(this.m_cursorPosition) || this.m_tree;
+
+        if (this.processScrollBarOnMouseDown(element, this.m_cursorPosition)) return;
+
         const shiftKey = this.m_keysDown.has(KeyboardKey.LeftShift) || this.m_keysDown.has(KeyboardKey.RightShift);
         const ctrlKey = this.m_keysDown.has(KeyboardKey.LeftControl) || this.m_keysDown.has(KeyboardKey.RightControl);
         const altKey = this.m_keysDown.has(KeyboardKey.LeftAlt) || this.m_keysDown.has(KeyboardKey.RightAlt);
-
-        const element = this.elementAt(this.m_cursorPosition) || this.m_tree;
         const relPos = this.getRelativePos(element, this.m_cursorPosition);
         const deltaPos = new vec2();
 
@@ -382,11 +523,13 @@ export class UIEventManager {
 
         if (!this.m_tree) return;
 
+        const element = this.elementAt(this.m_cursorPosition) || this.m_tree;
+
+        if (this.processScrollBarOnMouseUp(element, this.m_cursorPosition)) return;
+
         const shiftKey = this.m_keysDown.has(KeyboardKey.LeftShift) || this.m_keysDown.has(KeyboardKey.RightShift);
         const ctrlKey = this.m_keysDown.has(KeyboardKey.LeftControl) || this.m_keysDown.has(KeyboardKey.RightControl);
         const altKey = this.m_keysDown.has(KeyboardKey.LeftAlt) || this.m_keysDown.has(KeyboardKey.RightAlt);
-
-        const element = this.elementAt(this.m_cursorPosition) || this.m_tree;
         const relPos = this.getRelativePos(element, this.m_cursorPosition);
         const deltaPos = new vec2();
 

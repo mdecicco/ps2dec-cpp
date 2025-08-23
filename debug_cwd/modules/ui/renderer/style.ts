@@ -624,6 +624,18 @@ export class Style {
         if (value === this.m_styleData.overflow) return;
 
         this.m_styleData.overflow = value;
+
+        switch (this.m_styleData.overflow) {
+            case Overflow.Visible:
+                Yoga.YGNodeStyleSetOverflow(this.m_yogaNode, Yoga.YGOverflow.YGOverflowVisible);
+                break;
+            case Overflow.Hidden:
+                Yoga.YGNodeStyleSetOverflow(this.m_yogaNode, Yoga.YGOverflow.YGOverflowHidden);
+                break;
+            case Overflow.Scroll:
+                Yoga.YGNodeStyleSetOverflow(this.m_yogaNode, Yoga.YGOverflow.YGOverflowScroll);
+                break;
+        }
     }
 
     get overflow() {

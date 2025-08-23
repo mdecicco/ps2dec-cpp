@@ -1,12 +1,13 @@
 import * as React from 'mini-react';
 import { ReactRoot, TextFragment, TreeNode } from 'mini-react/vdom';
-import { Box } from './components';
+import { Box, Geometry } from './components';
 import { Window } from 'window';
 import { UIRenderer } from './renderer/renderer';
 import { UINode } from './types/ui-node';
 import { BoxNode } from './types/box-node';
 import { TextNode } from './types/text-node';
 import { RootNode } from './types/root-node';
+import { GeometryNode } from './types/geometry-node';
 import { FontFamilyOptions, FontManager } from './utils/font-mgr';
 
 export * from './components';
@@ -55,6 +56,8 @@ export class UIRoot extends ReactRoot {
 
         if (React.isSpecificElement(inputNode.type, Box, props)) {
             node = new BoxNode(inputNode, this.mostRecentNode, props);
+        } else if (React.isSpecificElement(inputNode.type, Geometry, props)) {
+            node = new GeometryNode(inputNode, this.mostRecentNode, props);
         } else if (React.isSpecificElement(inputNode.type, TextFragment, props)) {
             node = new TextNode(inputNode, this.mostRecentNode);
         } else if (!this.m_root) {

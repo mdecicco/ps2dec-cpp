@@ -10,6 +10,7 @@ import {
 } from './types';
 import { compareProps, flattenChildren } from './logic';
 import { EventProducer } from 'event';
+import { decompiler } from 'decompiler';
 
 export const TextFragment: FunctionComponent<{ value: string }> = props => {
     return null;
@@ -380,6 +381,7 @@ export class ReactRoot {
     /** @internal */
     private processRenderQueue(depth: number = 0) {
         if (!this.m_rootNode || this.m_renderQueue.length === 0) return;
+
         const rerenderQueue = this.m_renderQueue;
         this.m_renderQueue = [];
 
@@ -403,6 +405,10 @@ export class ReactRoot {
             throw new Error(`ReactRoot.render should only be called once`);
         }
 
+        decompiler.onService(() => {
+            this.processRenderQueue();
+        });
+
         this.m_rootNode = TreeNode.fromReactNode(this, node, null);
 
         this.m_isRendering = true;
@@ -412,8 +418,6 @@ export class ReactRoot {
         if (this.m_renderQueue.length === 0) {
             this.onAfterRender(this.m_rootNode);
         }
-
-        this.processRenderQueue();
     }
 
     /** @internal */
@@ -422,10 +426,6 @@ export class ReactRoot {
         if (this.m_renderQueue.indexOf(node) !== -1) return;
 
         this.m_renderQueue.push(node);
-
-        if (!this.m_isRendering) {
-            this.processRenderQueue();
-        }
     }
 
     /** @internal */

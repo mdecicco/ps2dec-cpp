@@ -12,11 +12,12 @@ import {
     UINode,
     BoxNode,
     TextNode,
+    GeometryNode,
     Vertex,
     TextGeometry,
     BoxGeometry,
     Overflow,
-    MouseEvent
+    CustomGeometry
 } from '../types';
 import { FontFamily, FontManager } from '../utils/font-mgr';
 import { UIEventManager } from '../utils/event-mgr';
@@ -105,22 +106,74 @@ export class UIRenderer {
         if (fontFamily) {
             let textDraw = this.m_textDraws.get(fontFamily);
             if (!textDraw) {
-                textDraw = this.m_renderContext.allocateTextDraw(8192, fontFamily);
+                textDraw = this.m_renderContext.allocateTextDraw(32768, fontFamily);
                 this.m_textDraws.set(fontFamily, textDraw);
             }
 
+            const proj = mat4.identity();
+            Transform.ortho(proj, 0, this.m_windowSize.width, 0, this.m_windowSize.height, 0, 1);
+            textDraw.drawCall.uniforms.projection = proj.transposed;
+
+            let offsetX = 0;
+            let offsetY = 0;
+
+            if (node.parent) {
+                const offset = node.parent.scrollOffset;
+                offsetX = -offset.x;
+                offsetY = -offset.y;
+            }
+
             const { x, y } = node.style.clientRect;
-            textDraw.drawText(x, y, geometry, clipRectIndex);
+            textDraw.drawText(x + offsetX, y + offsetY, geometry, clipRectIndex);
         }
     }
 
     private drawBox(node: Element, geometry: BoxGeometry, clipRectIndex: u32) {
         const { vertices } = geometry;
 
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (node.parent) {
+            const offset = node.parent.scrollOffset;
+            offsetX = -offset.x;
+            offsetY = -offset.y;
+        }
+
         for (const vertex of vertices) {
-            const pos = new vec4();
+            const pos = new vec4(offsetX, offsetY, 0, 0);
             vec4.add(pos, vertex.position, geometry.offsetPosition);
             const vtx = new Vertex(pos, vertex.color, undefined, clipRectIndex);
+            this.m_boxDraw!.addVertex(vtx);
+        }
+    }
+
+    private drawCustom(node: Element, geometry: CustomGeometry, clipRectIndex: u32) {
+        const { vertices } = geometry;
+        const { x, y } = node.style.clientRect;
+
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (node.parent) {
+            const offset = node.parent.scrollOffset;
+            offsetX = -offset.x;
+            offsetY = -offset.y;
+        }
+
+        for (const vertex of vertices) {
+            const pos = new vec4();
+            pos.x = vertex.position.x + geometry.offsetPosition.x + x + offsetX;
+            pos.y = vertex.position.y + geometry.offsetPosition.y + y + offsetY;
+            pos.z = vertex.position.z ?? 0.0 + geometry.offsetPosition.z;
+            pos.w = geometry.offsetPosition.w;
+
+            const color = vertex.color
+                ? new vec4(vertex.color.r, vertex.color.g, vertex.color.b, vertex.color.a ?? 1.0)
+                : new vec4(node.style.color.r, node.style.color.g, node.style.color.b, node.style.color.a);
+
+            const uv = vertex.uv ? new vec2(vertex.uv.u, vertex.uv.v) : new vec2();
+            const vtx = new Vertex(pos, color, uv, clipRectIndex);
             this.m_boxDraw!.addVertex(vtx);
         }
     }
@@ -135,6 +188,9 @@ export class UIRenderer {
             if (node.source instanceof BoxNode) {
                 const geometry = node.geometry as BoxGeometry | null;
                 if (geometry) this.drawBox(node, geometry, clip.index);
+            } else if (node.source instanceof GeometryNode) {
+                const geometry = node.geometry as CustomGeometry | null;
+                if (geometry) this.drawCustom(node, geometry, clip.index);
             } else if (node.source instanceof TextNode) {
                 const geometry = node.geometry as TextGeometry | null;
                 if (geometry) this.drawText(node, geometry, clip.index);
@@ -165,8 +221,6 @@ export class UIRenderer {
         if (!this.m_boxDraw) return;
 
         if (this.m_renderContext.begin()) {
-            Element.__internal_afterLayout(this.m_lastTree);
-
             this.m_renderContext.clipRects.reset();
             this.m_boxDraw.resetUsedVertices();
             for (const textDraw of this.m_textDraws.values()) {

@@ -116,6 +116,12 @@ export class FontFamily {
         const invFontScale = 1.0 / fontHeight;
         let advance = glyph.advance * this.m_atlas.emSize * invFontScale * properties.fontSize;
 
+        // dumb wrapping for now at the character level
+        if (cursor.x + advance > properties.maxWidth) {
+            cursor.x = 0;
+            cursor.y += properties.fontSize;
+        }
+
         if (nextCodepoint !== null) {
             const kerningMap = this.m_kerning.get(codepoint);
             if (kerningMap) {

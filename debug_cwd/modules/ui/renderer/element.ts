@@ -3,20 +3,21 @@ import { EventProducer } from 'event';
 import { Window } from 'window';
 import { vec2f } from 'math';
 import { TreeNode } from 'mini-react/vdom';
+import { vec2, vec4 } from 'math-ext';
+import { isChanged } from 'is-changed';
 
 import { KeyboardEvent, MouseEvent, ResizeEvent, ScrollEvent, UIEvent, WheelEvent } from '../types/events';
-import { ParsedStyleProps } from '../types/style';
+import { ParsedStyleProps, TextOverflow, WhiteSpace } from '../types/style';
 import { TextNode } from '../types/text-node';
 import { UINode } from '../types/ui-node';
 import { BoxNode } from '../types/box-node';
-import type { BoxProps } from '../types/elements';
-import { Geometry, TextGeometry, BoxGeometry, BoxProperties } from '../types/geometry';
+import { GeometryNode } from '../types/geometry-node';
+import type { BoxProps, GeometryProps } from '../types/elements';
+import { Geometry, TextGeometry, CustomGeometry, BoxGeometry, BoxProperties, GeometryType } from '../types/geometry';
 
 import { Style } from './style';
 import { getCompleteStyle, FontManager } from '../utils';
-import { isChanged } from 'is-changed';
-import { buildBoxGeometry } from 'ui/utils/box-geometry';
-import { vec2 } from 'math-ext';
+import { buildBoxGeometry } from '../utils/box-geometry';
 
 type ElementEvents = {
     click?: (event: MouseEvent) => void;
@@ -38,6 +39,14 @@ type ElementEvents = {
 
 type RendererState = {
     isHovered: boolean;
+    verticalScrollValueStart: f32;
+    horizontalScrollValueStart: f32;
+    verticalScrollBarHovered: boolean;
+    horizontalScrollBarHovered: boolean;
+    verticalScrollBarDragStart: vec2 | null;
+    horizontalScrollBarDragStart: vec2 | null;
+    verticalScrollBarDragMultiplier: f32;
+    horizontalScrollBarDragMultiplier: f32;
 };
 
 export class Element extends EventProducer<ElementEvents> {
@@ -86,10 +95,72 @@ export class Element extends EventProducer<ElementEvents> {
             this.m_window
         );
         this.m_rendererState = {
-            isHovered: false
+            isHovered: false,
+            verticalScrollValueStart: 0.0,
+            horizontalScrollValueStart: 0.0,
+            verticalScrollBarHovered: false,
+            horizontalScrollBarHovered: false,
+            verticalScrollBarDragStart: null,
+            horizontalScrollBarDragStart: null,
+            verticalScrollBarDragMultiplier: 1.0,
+            horizontalScrollBarDragMultiplier: 1.0
         };
 
         Yoga.YGConfigSetUseWebDefaults(Yoga.YGConfigGetDefault(), true);
+
+        if (this.m_source instanceof GeometryNode) {
+            Yoga.YGNodeSetMeasureFunc(this.m_yogaNode, (width, widthMode, height, heightMode) => {
+                if (!(this.m_source instanceof GeometryNode)) return new vec2f(0.0, 0.0);
+
+                let geometryWidth = 0.0;
+                let geometryHeight = 0.0;
+
+                const props = this.m_source.node.props as GeometryProps;
+                const geometry = this.m_geometry as CustomGeometry | null;
+                if (!geometry || props.version !== geometry.version) {
+                    for (const vertex of props.vertices) {
+                        geometryWidth = Math.max(geometryWidth, vertex.position.x);
+                        geometryHeight = Math.max(geometryHeight, vertex.position.y);
+                    }
+
+                    this.m_geometry = {
+                        type: GeometryType.Custom,
+                        version: props.version,
+                        offsetPosition: new vec4(),
+                        width: geometryWidth,
+                        height: geometryHeight,
+                        vertices: props.vertices
+                    };
+                }
+
+                let outWidth = geometryWidth;
+                let outHeight = geometryHeight;
+
+                switch (widthMode) {
+                    case Yoga.YGMeasureMode.YGMeasureModeUndefined:
+                        break;
+                    case Yoga.YGMeasureMode.YGMeasureModeExactly:
+                        outWidth = width;
+                        break;
+                    case Yoga.YGMeasureMode.YGMeasureModeAtMost:
+                        outWidth = Math.min(width, geometryWidth);
+                        break;
+                }
+
+                switch (heightMode) {
+                    case Yoga.YGMeasureMode.YGMeasureModeUndefined:
+                        break;
+                    case Yoga.YGMeasureMode.YGMeasureModeExactly:
+                        outHeight = height;
+                        break;
+                    case Yoga.YGMeasureMode.YGMeasureModeAtMost:
+                        outHeight = Math.min(height, geometryHeight);
+                        break;
+                }
+
+                return new vec2f(outWidth, outHeight);
+            });
+        }
 
         if (this.m_source instanceof TextNode) {
             Yoga.YGNodeSetNodeType(this.m_yogaNode, Yoga.YGNodeType.YGNodeTypeText);
@@ -190,11 +261,17 @@ export class Element extends EventProducer<ElementEvents> {
     }
 
     set scrollOffset(offset: vec2) {
-        if (this.m_scrollOffset.x === offset.x && this.m_scrollOffset.y === offset.y) return;
+        const constrainedOffset = new vec2(
+            Math.max(0, Math.min(offset.x, this.m_contentSize.x - this.m_style.clientRect.width)),
+            Math.max(0, Math.min(offset.y, this.m_contentSize.y - this.m_style.clientRect.height))
+        );
+
+        if (this.m_scrollOffset.x === constrainedOffset.x && this.m_scrollOffset.y === constrainedOffset.y) return;
         const delta = new vec2();
-        vec2.sub(delta, offset, this.m_scrollOffset);
+        vec2.sub(delta, constrainedOffset, this.m_scrollOffset);
         this.dispatch('scroll', new ScrollEvent(this, delta));
-        this.m_scrollOffset = offset;
+        this.m_scrollOffset = constrainedOffset;
+        this.m_treeNode.root.enqueueForRender(this.m_treeNode);
     }
 
     get scrollX() {
@@ -202,10 +279,13 @@ export class Element extends EventProducer<ElementEvents> {
     }
 
     set scrollX(x: number) {
-        if (this.m_scrollOffset.x === x) return;
-        const delta = new vec2(x - this.m_scrollOffset.x, 0);
+        const constrainedX = Math.max(0, Math.min(x, this.m_contentSize.x - this.m_style.clientRect.width));
+
+        if (this.m_scrollOffset.x === constrainedX) return;
+        const delta = new vec2(constrainedX - this.m_scrollOffset.x, 0);
         this.dispatch('scroll', new ScrollEvent(this, delta));
-        this.m_scrollOffset.x = x;
+        this.m_scrollOffset.x = constrainedX;
+        this.m_treeNode.root.enqueueForRender(this.m_treeNode);
     }
 
     get scrollY() {
@@ -213,10 +293,13 @@ export class Element extends EventProducer<ElementEvents> {
     }
 
     set scrollY(y: number) {
-        if (this.m_scrollOffset.y === y) return;
-        const delta = new vec2(0, y - this.m_scrollOffset.y);
+        const constrainedY = Math.max(0, Math.min(y, this.m_contentSize.y - this.m_style.clientRect.height));
+
+        if (this.m_scrollOffset.y === constrainedY) return;
+        const delta = new vec2(0, constrainedY - this.m_scrollOffset.y);
         this.dispatch('scroll', new ScrollEvent(this, delta));
-        this.m_scrollOffset.y = y;
+        this.m_scrollOffset.y = constrainedY;
+        this.m_treeNode.root.enqueueForRender(this.m_treeNode);
     }
 
     get contentSize() {
@@ -295,6 +378,16 @@ export class Element extends EventProducer<ElementEvents> {
             if (props.onMouseWheel) {
                 props.onMouseWheel(e);
             }
+
+            if (e.defaultPrevented) return;
+
+            if (this.m_contentSize.x > this.m_style.clientRect.width) {
+                this.scrollX = this.scrollX - e.delta.x * 3;
+            }
+
+            if (this.m_contentSize.y > this.m_style.clientRect.height) {
+                this.scrollY = this.scrollY - e.delta.y * 3;
+            }
         });
 
         this.addListener('keydown', e => {
@@ -329,6 +422,23 @@ export class Element extends EventProducer<ElementEvents> {
             const props = this.m_source.node.props as BoxProps;
             if (props.onResize) {
                 props.onResize(e);
+            }
+
+            const scrollHeight = Math.max(0, this.m_contentSize.y - this.m_style.clientRect.height);
+            const scrollWidth = Math.max(0, this.m_contentSize.x - this.m_style.clientRect.width);
+            let didChange = false;
+            if (this.m_scrollOffset.x > scrollWidth) {
+                this.m_scrollOffset.x = scrollWidth;
+                didChange = true;
+            }
+
+            if (this.m_scrollOffset.y > scrollHeight) {
+                this.m_scrollOffset.y = scrollHeight;
+                didChange = true;
+            }
+
+            if (didChange) {
+                this.m_treeNode.root.enqueueForRender(this.m_treeNode);
             }
         });
     }
@@ -407,40 +517,73 @@ export class Element extends EventProducer<ElementEvents> {
         element.m_style.paddingRight = s.padding.right;
         element.m_style.paddingTop = s.padding.top;
         element.m_style.paddingBottom = s.padding.bottom;
+    }
 
-        if (newSource instanceof TextNode && prevSource instanceof TextNode) {
-            const geometry = element.m_geometry as TextGeometry | null;
-            let maxWidth = element.m_style.clientRect.width;
-            let maxHeight = element.m_style.clientRect.height;
+    /** @internal */
+    static __internal_beforeLayout(element: Element) {
+        if (element.m_source instanceof GeometryNode) {
+            const props = element.m_source.node.props as GeometryProps;
+            const geometry = element.m_geometry as CustomGeometry | null;
+            if (!geometry || props.version !== geometry.version) {
+                let width = 0.0;
+                let height = 0.0;
 
-            if (geometry) {
-                maxWidth = geometry.textProperties.maxWidth;
-                maxHeight = geometry.textProperties.maxHeight;
+                for (const vertex of props.vertices) {
+                    width = Math.max(width, vertex.position.x);
+                    height = Math.max(height, vertex.position.y);
+                }
+
+                element.m_geometry = {
+                    type: GeometryType.Custom,
+                    version: props.version,
+                    offsetPosition: new vec4(),
+                    width,
+                    height,
+                    vertices: props.vertices
+                };
+
+                Yoga.YGNodeMarkDirty(element.m_yogaNode);
             }
+        } else if (element.m_source instanceof TextNode) {
+            const geometry = element.m_geometry as TextGeometry | null;
+
+            let shouldConstrainWidth = false;
+            let shouldConstrainHeight = false;
+
+            // TODO: Not sure if this is correct
+            if (element.m_style.whiteSpace !== WhiteSpace.Nowrap) {
+                shouldConstrainWidth = true;
+            }
+
+            let maxWidth = shouldConstrainWidth ? element.m_style.clientRect.width : Infinity;
+            let maxHeight = shouldConstrainHeight ? element.m_style.clientRect.height : Infinity;
 
             const textProperties = FontManager.extractTextProperties(element.m_style, maxWidth, maxHeight);
-            if (geometry && isChanged(geometry.textProperties, textProperties)) {
-                Yoga.YGNodeMarkDirty(element.m_yogaNode);
-            } else {
+            if (!geometry || isChanged(geometry.textProperties, textProperties)) {
                 Yoga.YGNodeMarkDirty(element.m_yogaNode);
             }
+        }
+
+        for (const child of element.m_children) {
+            Element.__internal_beforeLayout(child);
         }
     }
 
     /** @internal */
     static __internal_afterLayout(element: Element) {
-        if (element.m_source instanceof BoxNode) {
-            const boxProps: BoxProperties = {
-                rect: element.m_style.clientRect,
-                borderWidth: element.m_style.resolveBorderWidth(element.m_style.borderWidth),
-                borderColor: element.m_style.borderColor,
-                style: element.m_style.borderStyle,
-                color: element.m_style.backgroundColor
-            };
+        const prevWidth = element.m_style.clientRect.width;
+        const prevHeight = element.m_style.clientRect.height;
+        element.m_style.readLayout();
+        const newWidth = element.m_style.clientRect.width;
+        const newHeight = element.m_style.clientRect.height;
 
-            const geometry = element.m_geometry as BoxGeometry | null;
-            if (!geometry || isChanged(boxProps, geometry.properties)) {
-                element.m_geometry = buildBoxGeometry(boxProps);
+        if (element.m_source instanceof TextNode) {
+            const geometry = element.m_geometry as TextGeometry | null;
+            if (geometry) {
+                element.m_style.clientRect.width = geometry.width;
+                element.m_style.clientRect.height = geometry.height;
+                element.m_style.clientRect.right = element.m_style.clientRect.left + geometry.width;
+                element.m_style.clientRect.bottom = element.m_style.clientRect.top + geometry.height;
             }
         }
 
@@ -451,13 +594,45 @@ export class Element extends EventProducer<ElementEvents> {
             Element.__internal_afterLayout(child);
 
             const { x, y, width, height } = child.m_style.clientRect;
-            contentWidth = Math.max(contentWidth, x + width);
-            contentHeight = Math.max(contentHeight, y + height);
+
+            const childEndX = x + width - element.m_style.clientRect.x;
+            const childEndY = y + height - element.m_style.clientRect.y;
+
+            contentWidth = Math.max(contentWidth, childEndX);
+            contentHeight = Math.max(contentHeight, childEndY);
         }
 
         const { paddingLeft, paddingRight, paddingTop, paddingBottom } = element.m_style.clientRect;
 
         element.m_contentSize.x = contentWidth + paddingLeft + paddingRight;
         element.m_contentSize.y = contentHeight + paddingTop + paddingBottom;
+
+        if (element.m_source instanceof BoxNode) {
+            const boxProps: BoxProperties = {
+                rect: element.m_style.clientRect,
+                borderWidth: element.m_style.resolveBorderWidth(element.m_style.borderWidth),
+                borderColor: element.m_style.borderColor,
+                borderStyle: element.m_style.borderStyle,
+                overflow: element.m_style.overflow,
+                color: element.m_style.backgroundColor,
+                scrollX: element.m_scrollOffset.x,
+                scrollY: element.m_scrollOffset.y,
+                contentWidth: element.m_contentSize.x,
+                contentHeight: element.m_contentSize.y,
+                verticalScrollBarHovered: element.rendererState.verticalScrollBarHovered,
+                horizontalScrollBarHovered: element.rendererState.horizontalScrollBarHovered,
+                verticalScrollBarDragging: element.rendererState.verticalScrollBarDragStart !== null,
+                horizontalScrollBarDragging: element.rendererState.horizontalScrollBarDragStart !== null
+            };
+
+            const geometry = element.m_geometry as BoxGeometry | null;
+            if (!geometry || isChanged(boxProps, geometry.properties)) {
+                element.m_geometry = buildBoxGeometry(boxProps);
+            }
+        }
+
+        if (newWidth !== prevWidth || newHeight !== prevHeight) {
+            element.dispatch('resize', new ResizeEvent(element, newWidth, newHeight, prevWidth, prevHeight));
+        }
     }
 }

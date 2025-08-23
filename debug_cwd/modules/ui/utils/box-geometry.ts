@@ -1,8 +1,145 @@
 import { vec4 } from 'math-ext';
-import { BoxGeometry, BoxProperties, ClientRect, Color, GeometryType, Vertex } from '../types';
+import { BoxGeometry, BoxProperties, ClientRect, Color, GeometryType, Overflow, Vertex } from '../types';
+import type { Element } from '../renderer/element';
 
-function buildSimpleBoxGeometry(rect: ClientRect, color: Color, inoutGeometry: BoxGeometry) {
-    const { x, y, width, height } = rect;
+type ScrollBarHandleBox = {
+    x: f32; // x coordinate of the scroll bar handle box (relative to the containing box's top-left corner)
+    y: f32; // y coordinate of the scroll bar handle box (relative to the containing box's top-left corner)
+    width: f32; // width of the scroll bar handle box
+    height: f32; // height of the scroll bar handle box
+    scrollOffsetPerHandlePixel: f32; // how much does the scroll offset change when the handle is moved by 1 pixel
+};
+
+function getVerticalScrollBarHandleBox(
+    rect: ClientRect,
+    geometry: BoxGeometry,
+    scrollBarWidth: f32,
+    scrollBarMargin: f32
+): ScrollBarHandleBox {
+    const { x: boxX, y: boxY, width: boxWidth, height: boxHeight } = rect;
+    const { scrollY, contentHeight } = geometry.properties;
+
+    const maxScrollBarLength = boxHeight - scrollBarMargin * 2 - scrollBarWidth;
+    const scrollBarLength = (boxHeight / contentHeight) * maxScrollBarLength;
+    const scrollBarPosition = (scrollY / (contentHeight - boxHeight)) * (maxScrollBarLength - scrollBarLength);
+    const scrollOffsetPerHandlePixel = (contentHeight - boxHeight) / (maxScrollBarLength - scrollBarLength);
+
+    return {
+        x: boxX + boxWidth - scrollBarWidth - scrollBarMargin,
+        y: boxY + scrollBarPosition + scrollBarMargin,
+        width: scrollBarWidth,
+        height: scrollBarLength,
+        scrollOffsetPerHandlePixel
+    };
+}
+
+function getHorizontalScrollBarHandleBox(
+    rect: ClientRect,
+    geometry: BoxGeometry,
+    scrollBarWidth: f32,
+    scrollBarMargin: f32
+): ScrollBarHandleBox {
+    const { x: boxX, y: boxY, width: boxWidth, height: boxHeight } = rect;
+    const { scrollX, contentWidth } = geometry.properties;
+
+    const maxScrollBarLength = boxWidth - scrollBarMargin * 2 - scrollBarWidth;
+    const scrollBarLength = (boxWidth / contentWidth) * maxScrollBarLength;
+    const scrollBarPosition = (scrollX / (contentWidth - boxWidth)) * (maxScrollBarLength - scrollBarLength);
+    const scrollOffsetPerHandlePixel = (contentWidth - boxWidth) / (maxScrollBarLength - scrollBarLength);
+
+    return {
+        x: boxX + scrollBarPosition + scrollBarMargin,
+        y: boxY + boxHeight - scrollBarWidth - scrollBarMargin,
+        width: scrollBarLength,
+        height: scrollBarWidth,
+        scrollOffsetPerHandlePixel
+    };
+}
+
+function buildBoxScrollGeometry(rect: ClientRect, inoutGeometry: BoxGeometry) {
+    if (inoutGeometry.properties.overflow !== Overflow.Scroll) return;
+
+    const { width, height } = rect;
+    const {
+        contentWidth,
+        contentHeight,
+        verticalScrollBarHovered,
+        horizontalScrollBarHovered,
+        verticalScrollBarDragging,
+        horizontalScrollBarDragging
+    } = inoutGeometry.properties;
+
+    const scrollBarEndRadius = 5; // radius of the scroll bar end caps in pixels
+    const scrollBarWidth = 10; // width of the scroll bar in pixels
+    const scrollBarColor = { r: 0.5, g: 0.5, b: 0.5, a: 0.7 }; // color of the scroll bar
+    const scrollBarHoverColor = { r: 0.8, g: 0.8, b: 0.8, a: 0.9 }; // color of the scroll bar when hovered
+    const scrollBarDraggingColor = { r: 1.0, g: 1.0, b: 1.0, a: 1.0 }; // color of the scroll bar when dragging
+    const scrollBarMargin = 5; // margin of the scroll bar from the edge of the box
+
+    if (contentHeight > height) {
+        const verticalScrollBarHandleBox = getVerticalScrollBarHandleBox(
+            rect,
+            inoutGeometry,
+            scrollBarWidth,
+            scrollBarMargin
+        );
+
+        let color = scrollBarColor;
+        if (verticalScrollBarDragging) color = scrollBarDraggingColor;
+        else if (verticalScrollBarHovered) color = scrollBarHoverColor;
+
+        buildBoxGeometryInternal(
+            verticalScrollBarHandleBox.x,
+            verticalScrollBarHandleBox.y,
+            rect.depth,
+            verticalScrollBarHandleBox.width,
+            verticalScrollBarHandleBox.height,
+            color,
+            scrollBarEndRadius,
+            scrollBarEndRadius,
+            scrollBarEndRadius,
+            scrollBarEndRadius,
+            inoutGeometry
+        );
+    }
+
+    if (contentWidth > width) {
+        const horizontalScrollBarHandleBox = getHorizontalScrollBarHandleBox(
+            rect,
+            inoutGeometry,
+            scrollBarWidth,
+            scrollBarMargin
+        );
+
+        let color = scrollBarColor;
+        if (horizontalScrollBarDragging) color = scrollBarDraggingColor;
+        else if (horizontalScrollBarHovered) color = scrollBarHoverColor;
+
+        buildBoxGeometryInternal(
+            horizontalScrollBarHandleBox.x,
+            horizontalScrollBarHandleBox.y,
+            rect.depth,
+            horizontalScrollBarHandleBox.width,
+            horizontalScrollBarHandleBox.height,
+            color,
+            scrollBarEndRadius,
+            scrollBarEndRadius,
+            scrollBarEndRadius,
+            scrollBarEndRadius,
+            inoutGeometry
+        );
+    }
+}
+
+function buildSimpleBoxGeometry(
+    x: f32,
+    y: f32,
+    z: f32,
+    width: f32,
+    height: f32,
+    color: Color,
+    inoutGeometry: BoxGeometry
+) {
     const p0 = new vec4(x, y, 0.1, 0.0);
     const p1 = new vec4(x + width, y, 0.1, 0.0);
     const p2 = new vec4(x + width, y + height, 0.1, 0.0);
@@ -16,40 +153,38 @@ function buildSimpleBoxGeometry(rect: ClientRect, color: Color, inoutGeometry: B
     inoutGeometry.vertices.push(new Vertex(p3, new vec4(color.r, color.g, color.b, color.a)));
 }
 
-export function buildBoxGeometry(properties: BoxProperties): BoxGeometry {
-    const geometry: BoxGeometry = {
-        type: GeometryType.Box,
-        properties,
-        offsetPosition: new vec4(0, 0, 0, 0),
-        vertices: []
-    };
-
-    const { rect, color } = properties;
-
-    const tl = rect.topLeftRadius;
-    const tr = rect.topRightRadius;
-    const bl = rect.bottomLeftRadius;
-    const br = rect.bottomRightRadius;
-
-    if (tl === 0 && tr === 0 && bl === 0 && br === 0) {
-        buildSimpleBoxGeometry(rect, color, geometry);
-        return geometry;
+function buildBoxGeometryInternal(
+    x: f32,
+    y: f32,
+    z: f32,
+    width: f32,
+    height: f32,
+    color: Color,
+    radiusTL: f32,
+    radiusTR: f32,
+    radiusBL: f32,
+    radiusBR: f32,
+    inoutGeometry: BoxGeometry
+) {
+    if (radiusTL === 0 && radiusTR === 0 && radiusBL === 0 && radiusBR === 0) {
+        buildSimpleBoxGeometry(x, y, z, width, height, color, inoutGeometry);
+        return;
     }
 
     // Clamp radii to prevent overlapping corners
-    const maxRadiusX = rect.width * 0.5;
-    const maxRadiusY = rect.height * 0.5;
-    const clampedTL = Math.min(tl, maxRadiusX, maxRadiusY);
-    const clampedTR = Math.min(tr, maxRadiusX, maxRadiusY);
-    const clampedBL = Math.min(bl, maxRadiusX, maxRadiusY);
-    const clampedBR = Math.min(br, maxRadiusX, maxRadiusY);
+    const maxRadiusX = width * 0.5;
+    const maxRadiusY = height * 0.5;
+    const clampedTL = Math.min(radiusTL, maxRadiusX, maxRadiusY);
+    const clampedTR = Math.min(radiusTR, maxRadiusX, maxRadiusY);
+    const clampedBL = Math.min(radiusBL, maxRadiusX, maxRadiusY);
+    const clampedBR = Math.min(radiusBR, maxRadiusX, maxRadiusY);
 
     // Calculate corner centers
     const corners = {
-        tl: { x: rect.x + clampedTL, y: rect.y + clampedTL },
-        tr: { x: rect.x + rect.width - clampedTR, y: rect.y + clampedTR },
-        bl: { x: rect.x + clampedBL, y: rect.y + rect.height - clampedBL },
-        br: { x: rect.x + rect.width - clampedBR, y: rect.y + rect.height - clampedBR }
+        tl: { x: x + clampedTL, y: y + clampedTL },
+        tr: { x: x + width - clampedTR, y: y + clampedTR },
+        bl: { x: x + clampedBL, y: y + height - clampedBL },
+        br: { x: x + width - clampedBR, y: y + height - clampedBR }
     };
 
     // Optimized vertex generation - adaptive segments based on radius size
@@ -128,12 +263,12 @@ export function buildBoxGeometry(properties: BoxProperties): BoxGeometry {
 
     // Skip duplicate points to prevent degenerate triangles
     if (allVertices.length < 3) {
-        buildSimpleBoxGeometry(rect, color, geometry);
-        return geometry;
+        buildSimpleBoxGeometry(x, y, z, width, height, color, inoutGeometry);
+        return;
     }
 
     // Generate triangles using center point (triangle fan approach converted to triangle list)
-    const center = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    const center = { x: x + width / 2, y: y + height / 2 };
     const colorVec = new vec4(color.r, color.g, color.b, color.a);
 
     // Convert to triangle list (each triangle uses 3 vertices)
@@ -152,10 +287,61 @@ export function buildBoxGeometry(properties: BoxProperties): BoxGeometry {
         if (Math.abs(crossProduct) < 0.001) continue; // Skip degenerate triangle
 
         // Create triangle: center -> current -> next
-        geometry.vertices.push(new Vertex(new vec4(center.x, center.y, rect.depth, 0.0), colorVec));
-        geometry.vertices.push(new Vertex(new vec4(current.x, current.y, rect.depth, 0.0), colorVec));
-        geometry.vertices.push(new Vertex(new vec4(next.x, next.y, rect.depth, 0.0), colorVec));
+        inoutGeometry.vertices.push(new Vertex(new vec4(center.x, center.y, z, 0.0), colorVec));
+        inoutGeometry.vertices.push(new Vertex(new vec4(current.x, current.y, z, 0.0), colorVec));
+        inoutGeometry.vertices.push(new Vertex(new vec4(next.x, next.y, z, 0.0), colorVec));
     }
 
+    return;
+}
+
+export function buildBoxGeometry(properties: BoxProperties): BoxGeometry {
+    const geometry: BoxGeometry = {
+        type: GeometryType.Box,
+        properties,
+        offsetPosition: new vec4(0, 0, 0, 0),
+        vertices: []
+    };
+
+    const { rect, color } = properties;
+
+    const tl = rect.topLeftRadius;
+    const tr = rect.topRightRadius;
+    const bl = rect.bottomLeftRadius;
+    const br = rect.bottomRightRadius;
+
+    buildBoxGeometryInternal(rect.x, rect.y, rect.depth, rect.width, rect.height, color, tl, tr, bl, br, geometry);
+    buildBoxScrollGeometry(rect, geometry);
+
     return geometry;
+}
+
+export function getScrollBarHandles(element: Element) {
+    if (!element.geometry || element.geometry.type !== GeometryType.Box) return null;
+    const geometry = element.geometry;
+    if (geometry.properties.overflow !== Overflow.Scroll) return null;
+
+    const rect = element.style.clientRect;
+
+    const { width, height } = rect;
+    const { contentWidth, contentHeight } = geometry.properties;
+
+    const scrollBarWidth = 10; // width of the scroll bar in pixels
+    const scrollBarMargin = 5; // margin of the scroll bar from the edge of the box
+
+    let verticalScrollBarHandleBox: ScrollBarHandleBox | null = null;
+    let horizontalScrollBarHandleBox: ScrollBarHandleBox | null = null;
+
+    if (contentHeight > height) {
+        verticalScrollBarHandleBox = getVerticalScrollBarHandleBox(rect, geometry, scrollBarWidth, scrollBarMargin);
+    }
+
+    if (contentWidth > width) {
+        horizontalScrollBarHandleBox = getHorizontalScrollBarHandleBox(rect, geometry, scrollBarWidth, scrollBarMargin);
+    }
+
+    return {
+        horizontal: horizontalScrollBarHandleBox,
+        vertical: verticalScrollBarHandleBox
+    };
 }

@@ -16,23 +16,6 @@ export class LayoutEngine extends IElementRecursion {
         this.m_root = root;
     }
 
-    readLayout(node: Element) {
-        const prevWidth = node.style.clientRect.width;
-        const prevHeight = node.style.clientRect.height;
-
-        node.style.readLayout();
-
-        for (const child of node.children) {
-            this.readLayout(child);
-        }
-
-        const newWidth = node.style.clientRect.width;
-        const newHeight = node.style.clientRect.height;
-        if (newWidth !== prevWidth || newHeight !== prevHeight) {
-            node.dispatch('resize', new ResizeEvent(node, newWidth, newHeight, prevWidth, prevHeight));
-        }
-    }
-
     printNode(node: Element, indent: number) {
         const str = ' '.repeat(indent) + node.treeNode.displayName + ' ' + JSON.stringify(node.style.clientRect);
         console.log(str);
@@ -53,9 +36,9 @@ export class LayoutEngine extends IElementRecursion {
         this.m_root.style.minHeight = px(windowSize.y);
         this.m_root.style.maxHeight = px(windowSize.y);
 
+        Element.__internal_beforeLayout(this.m_root);
         Yoga.YGNodeCalculateLayout(this.m_root.yogaNode, windowSize.x, windowSize.y, Yoga.YGDirection.YGDirectionLTR);
-
-        this.readLayout(this.m_root);
+        Element.__internal_afterLayout(this.m_root);
         // this.printNode(this.m_root, 0);
     }
 }

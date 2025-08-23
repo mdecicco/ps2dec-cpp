@@ -1,3 +1,3 @@
 export { createRoot } from './root';
 export * from './components';
-export { BoxProps } from './types';
+export { BoxProps, GeometryProps, StyleProps, StyleAttributes } from './types';

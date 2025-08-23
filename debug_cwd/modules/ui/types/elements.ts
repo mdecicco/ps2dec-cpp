@@ -29,4 +29,25 @@ export type BoxProps = {
     onResize?: (event: ResizeEvent) => void;
 } & ElementBaseProps;
 
-export type ElementProps = BoxProps;
+export type GeometryVertex = {
+    position: { x: f32; y: f32; z?: f32 };
+    color?: { r: f32; g: f32; b: f32; a?: f32 };
+    uv?: { u: f32; v: f32 };
+};
+
+export type GeometryProps = {
+    /**
+     * Must be a multiple of 3. Every 3 vertices form a triangle.
+     * The front-face of the triangle must have the vertices in clockwise order.
+     * Positions are relative to wherever the layout algorithm chooses to place this element
+     */
+    vertices: GeometryVertex[];
+
+    /**
+     * The version of the geometry.
+     * This is used to determine if the geometry has changed since the last render
+     */
+    version: u32;
+} & ElementBaseProps;
+
+export type ElementProps = BoxProps | GeometryProps;
