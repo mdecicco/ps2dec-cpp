@@ -12,7 +12,6 @@ namespace decomp {
 
     PluginMgr::~PluginMgr() {
         if (m_isInitialized) {
-            warn("PluginMgr::~PluginMgr() - shutdown not called prior to destruction");
             shutdown();
         }
 
