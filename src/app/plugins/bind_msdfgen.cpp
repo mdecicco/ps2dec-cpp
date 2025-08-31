@@ -113,7 +113,7 @@ namespace decomp {
         msdfgen::destroyFont(font);
         msdfgen::deinitializeFreetype(ft);
 
-        if (!atlas->texture->init(width, height, VK_FORMAT_R8G8B8A8_SRGB)) {
+        if (!atlas->texture->init(width, height, VK_FORMAT_B8G8R8A8_UNORM)) {
             delete atlas->texture;
             delete atlas;
             throw GenericException("Failed to initialize font texture");
