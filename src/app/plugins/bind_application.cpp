@@ -90,6 +90,8 @@ namespace decomp {
 
         builder.baseType<utils::IWithLogging>();
 
+        builder.method("requestShutdown", &Application::requestShutdown);
+
         bind::DataType::Property& onInitialized = builder.pseudoMethod(
             "onInitialized",
             +[](Application* self, void (*callback)()) {

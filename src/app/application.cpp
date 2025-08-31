@@ -39,6 +39,12 @@ namespace decomp {
     }
 
     Application::~Application() {
+        onInitialized.clear();
+        onShutdownRequested.clear();
+        onService.clear();
+
+        m_commandMgr->unsubscribeFromAll(this);
+
         delete m_commandMgr;
         delete m_pluginMgr;
         delete m_socket;
@@ -93,26 +99,30 @@ namespace decomp {
 
             m_onInitializedDispatcher.dispatch(onInitialized);
 
-            while (m_socket->isOpen()) {
+            while (!m_shutdownRequested) {
                 m_pluginMgr->service();
 
                 for (Window* window : m_windows) {
                     window->pollEvents();
                 }
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                m_socket->processEvents();
+                if (m_socket->isOpen()) {
+                    m_socket->processEvents();
+                }
+
+                if (m_shutdownRequested) {
+                    break;
+                }
 
                 m_onServiceDispatcher.dispatch(onService);
 
-                if (m_shutdownRequested) {
-                    Duration msSinceShutdownRequested = Clock::now() - m_shutdownRequestedAt;
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
 
-                    if (msSinceShutdownRequested.count() > 1000.0f) {
-                        log("Shutting down");
-                        m_socket->close();
-                    }
-                }
+            log("Shutting down");
+
+            if (m_socket->isOpen()) {
+                m_socket->close();
             }
 
             bool stillProcessing = true;
@@ -121,35 +131,40 @@ namespace decomp {
                 for (Window* window : m_windows) {
                     stillProcessing |= window->pollEvents();
                 }
+
+                if (m_socket->isOpen()) {
+                    m_socket->processEvents();
+                    stillProcessing = true;
+                }
             }
         } catch (const GenericException& e) {
-            m_commandMgr->unsubscribeFromAll(this);
-            m_commandMgr->shutdown();
-            m_pluginMgr->shutdown();
             m_isRunning = false;
             throw e;
         } catch (const std::exception& e) {
-            m_commandMgr->unsubscribeFromAll(this);
-            m_commandMgr->shutdown();
-            m_pluginMgr->shutdown();
             m_isRunning = false;
             throw e;
         }
 
-        m_commandMgr->unsubscribeFromAll(this);
-        m_commandMgr->shutdown();
-        m_pluginMgr->shutdown();
         m_isRunning = false;
         return 0;
     }
 
-    void Application::onCommandCommit(cmd::CmdShutdown* command) {
+    void Application::requestShutdown() {
+        if (m_shutdownRequested) {
+            return;
+        }
+
         m_shutdownRequested   = true;
-        m_shutdownRequestedAt = std::chrono::steady_clock::now();
+        m_shutdownRequestedAt = Clock::now();
         log("Shutdown requested");
 
-        command->resolveCommit(this);
         m_onShutdownRequestedDispatcher.dispatch(onShutdownRequested);
+    }
+
+    void Application::onCommandCommit(cmd::CmdShutdown* command) {
+        requestShutdown();
+
+        command->resolveCommit(this);
     }
 
     void Application::onMessage(tspp::WebSocketConnection* connection, const void* data, u64 size) {
