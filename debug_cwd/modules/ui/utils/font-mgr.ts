@@ -14,7 +14,24 @@ export type FontFamilyOptions = {
     codepoints?: (u32 | string)[];
 };
 
-type GlyphInfo = {};
+type GlyphRect = {
+    x: f32;
+    y: f32;
+    width: f32;
+    height: f32;
+    u0: f32;
+    v0: f32;
+    u1: f32;
+    v1: f32;
+    isWhitespace: boolean;
+};
+
+type MeasureTextResult = {
+    width: f32;
+    height: f32;
+    cursorAfter: vec2;
+    glyphRects: GlyphRect[];
+};
 
 export class FontFamily {
     private m_atlas: FontAtlas | null;
@@ -111,29 +128,20 @@ export class FontFamily {
         return true;
     }
 
-    private renderSingleGlyph(
+    private getGlyphRect(
         cursor: vec2,
-        geometry: TextGeometry,
         codepoint: u32,
         nextCodepoint: u32 | null,
-        properties: TextProperties,
-        instanceIdx: u32
-    ) {
-        if (!this.m_atlas) return;
-
+        isFirst: boolean,
+        properties: TextProperties
+    ): GlyphRect | null {
         const glyph = this.m_glyphs.get(codepoint);
-        if (!glyph) return;
+        if (!glyph) return null;
 
         const fontHeight = this.m_ascender - this.m_descender;
         const invFontScale = 1.0 / fontHeight;
         const scale = invFontScale * properties.fontSize;
         let advance = glyph.advance * this.m_emSize * scale;
-
-        // dumb wrapping for now at the character level
-        if (cursor.x + advance > properties.maxWidth) {
-            cursor.x = 0;
-            cursor.y += properties.fontSize;
-        }
 
         if (nextCodepoint !== null) {
             const kerningMap = this.m_kerning.get(codepoint);
@@ -146,53 +154,119 @@ export class FontFamily {
         }
 
         if (glyph.width === 0 || glyph.height === 0) {
-            cursor.x += advance;
-            return;
+            return {
+                x: cursor.x,
+                y: cursor.y,
+                width: advance,
+                height: 0,
+                u0: 0,
+                v0: 0,
+                u1: 0,
+                v1: 0,
+                isWhitespace: true
+            };
         }
 
         let width = glyph.width * this.m_emSize;
         let height = glyph.height * this.m_emSize;
-        let x = glyph.bearingX * this.m_emSize;
+        let x = isFirst ? 0 : glyph.bearingX * this.m_emSize;
         let y = -glyph.bearingY * this.m_emSize + this.m_ascender + this.m_descender;
+
+        y = -glyph.bearingY * this.m_emSize + this.m_ascender;
 
         width *= scale;
         height *= scale;
         x *= scale;
         y *= scale;
 
+        y += properties.lineHeight * 0.5;
+        y -= fontHeight * scale * 0.5;
+
         x += cursor.x;
         y += cursor.y;
 
-        const z = 0.1;
-        const { r, g, b, a } = properties.color;
-
-        if (x + width > geometry.width) geometry.width = x + width;
-        if (y + height > geometry.height) geometry.height = y + height;
-
-        geometry.vertices.push(x, y, z, r, g, b, a, glyph.u0, glyph.v1, instanceIdx);
-        geometry.vertices.push(x + width, y, z, r, g, b, a, glyph.u1, glyph.v1, instanceIdx);
-        geometry.vertices.push(x + width, y + height, z, r, g, b, a, glyph.u1, glyph.v0, instanceIdx);
-        geometry.vertices.push(x, y, z, r, g, b, a, glyph.u0, glyph.v1, instanceIdx);
-        geometry.vertices.push(x + width, y + height, z, r, g, b, a, glyph.u1, glyph.v0, instanceIdx);
-        geometry.vertices.push(x, y + height, z, r, g, b, a, glyph.u0, glyph.v0, instanceIdx);
-
-        cursor.x += advance;
+        return { x, y, width, height, u0: glyph.u0, v0: glyph.v0, u1: glyph.u1, v1: glyph.v1, isWhitespace: false };
     }
 
-    createGlyphGeometry(codepoint: u32, properties: TextProperties, instanceIdx: u32): TextGeometry {
+    private measureText(cursor: vec2, text: string, isFirst: boolean, properties: TextProperties): MeasureTextResult {
+        const result: MeasureTextResult = {
+            width: 0,
+            height: 0,
+            cursorAfter: new vec2(cursor.x, cursor.y),
+            glyphRects: []
+        };
+
+        for (let i = 0; i < text.length; i++) {
+            const codepoint = text.charCodeAt(i);
+            const nextCodepoint = i < text.length - 1 ? text.charCodeAt(i + 1) : null;
+
+            const glyphRect = this.getGlyphRect(
+                result.cursorAfter,
+                codepoint,
+                nextCodepoint,
+                isFirst && i === 0,
+                properties
+            );
+            if (!glyphRect) continue;
+
+            const { width, height } = glyphRect;
+
+            result.width += width;
+            if (height > result.height) result.height = height;
+
+            result.cursorAfter.x += width;
+
+            if (glyphRect.isWhitespace) continue;
+            result.glyphRects.push(glyphRect);
+        }
+
+        return result;
+    }
+
+    private renderSingleGlyph(
+        glyphRect: GlyphRect,
+        geometry: TextGeometry,
+        properties: TextProperties,
+        instanceIdx: u32
+    ) {
+        if (!this.m_atlas) return;
+
+        const z = 0.1;
+        const { x, y, width, height, u0, v0, u1, v1, isWhitespace } = glyphRect;
+
+        if (isWhitespace) return;
+
+        const { r, g, b, a } = properties.color;
+
+        geometry.vertices.push(x, y, z, r, g, b, a, u0, v1, instanceIdx);
+        geometry.vertices.push(x + width, y, z, r, g, b, a, u1, v1, instanceIdx);
+        geometry.vertices.push(x + width, y + height, z, r, g, b, a, u1, v0, instanceIdx);
+        geometry.vertices.push(x, y, z, r, g, b, a, u0, v1, instanceIdx);
+        geometry.vertices.push(x + width, y + height, z, r, g, b, a, u1, v0, instanceIdx);
+        geometry.vertices.push(x, y + height, z, r, g, b, a, u0, v0, instanceIdx);
+    }
+
+    createGlyphGeometry(codepoint: u32, properties: TextProperties, instanceIdx: u32): TextGeometry | null {
+        const cursor = new vec2(0, 0);
+
+        const glyphRect = this.getGlyphRect(cursor, codepoint, null, true, properties);
+        if (!glyphRect) return null;
+
+        const { x, y, width, height } = glyphRect;
+
         const geometry: TextGeometry = {
             type: GeometryType.Text,
             text: String.fromCharCode(codepoint),
             textProperties: properties,
-            width: 0,
-            height: 0,
+            width: x + width,
+            height: y + height,
             offsetPosition: new vec4(),
             vertices: new VertexArray()
         };
 
         geometry.vertices.init(6);
 
-        this.renderSingleGlyph(new vec2(0, 0), geometry, codepoint, null, properties, instanceIdx);
+        this.renderSingleGlyph(glyphRect, geometry, properties, instanceIdx);
 
         return geometry;
     }
@@ -211,11 +285,51 @@ export class FontFamily {
         geometry.vertices.init(6 * text.length);
 
         const cursor = new vec2(0, 0);
+        const words = text.split(' ');
 
-        for (let i = 0; i < text.length; i++) {
-            const codepoint = text.charCodeAt(i);
-            const nextCodepoint = i < text.length - 1 ? text.charCodeAt(i + 1) : null;
-            this.renderSingleGlyph(cursor, geometry, codepoint, nextCodepoint, properties, instanceIdx);
+        const spaceWidth = this.getGlyphRect(cursor, 32, null, false, properties)?.width ?? 0;
+
+        let wordIdx = 0;
+        let isLineStart = true;
+        while (wordIdx < words.length) {
+            const word = words[wordIdx];
+
+            if (!isLineStart) {
+                cursor.x += spaceWidth;
+                if (cursor.x > properties.maxWidth) {
+                    cursor.x = 0;
+                    cursor.y += properties.lineHeight;
+                    isLineStart = true;
+                    continue;
+                }
+            }
+
+            const result = this.measureText(cursor, word, wordIdx === 0, properties);
+
+            if (result.cursorAfter.x > properties.maxWidth) {
+                cursor.x = 0;
+                cursor.y += properties.lineHeight;
+                isLineStart = true;
+
+                if (result.width > properties.maxWidth) {
+                    // text could not possibly fit
+                    break;
+                }
+
+                continue;
+            }
+
+            cursor.x = result.cursorAfter.x;
+            cursor.y = result.cursorAfter.y;
+            if (cursor.x > geometry.width) geometry.width = cursor.x;
+            if (cursor.y > geometry.height) geometry.height = cursor.y;
+
+            for (const glyphRect of result.glyphRects) {
+                this.renderSingleGlyph(glyphRect, geometry, properties, instanceIdx);
+            }
+
+            wordIdx++;
+            isLineStart = false;
         }
 
         return geometry;
@@ -282,6 +396,11 @@ export class FontManager {
             fontWeight: style.fontWeight,
             fontStyle: style.fontStyle,
             textAlign: style.textAlign,
+            textDecoration: style.textDecoration,
+            whiteSpace: style.whiteSpace,
+            wordBreak: style.wordBreak,
+            wordWrap: style.wordWrap,
+            textOverflow: style.textOverflow,
             maxWidth: maxWidth,
             maxHeight: maxHeight,
             lineHeight: style.resolveSize(style.lineHeight, Direction.Vertical),

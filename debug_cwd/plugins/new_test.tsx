@@ -376,7 +376,7 @@ class NewTestPlugin extends IPlugin {
 
         root.render(
             <WindowProvider window={window} onClose={() => decompiler.requestShutdown()}>
-                <Test3 />
+                <Test2 />
             </WindowProvider>
         );
     }

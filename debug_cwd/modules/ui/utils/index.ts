@@ -33,7 +33,7 @@ export function defaultStyle(): StyleAttributes {
         flexShrink: 1,
         flexBasis: 'auto',
         gap: '0px',
-        lineHeight: '1rem',
+        lineHeight: '1.2em',
         letterSpacing: '0px',
         fontSize: `${DEFAULT_FONT_SIZE}px`,
         fontWeight: 400,

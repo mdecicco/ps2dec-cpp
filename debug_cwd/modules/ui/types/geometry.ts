@@ -1,5 +1,17 @@
 import { vec4 } from 'math-ext';
-import { BorderStyle, ClientRect, Color, FontStyle, Overflow, TextAlign } from './style';
+import {
+    BorderStyle,
+    ClientRect,
+    Color,
+    FontStyle,
+    Overflow,
+    TextAlign,
+    TextDecoration,
+    TextOverflow,
+    WhiteSpace,
+    WordBreak,
+    WordWrap
+} from './style';
 import { VertexArray } from '../utils/vertex-array';
 
 export enum Direction {
@@ -19,6 +31,11 @@ export type TextProperties = {
     fontWeight: f32;
     fontStyle: FontStyle;
     textAlign: TextAlign;
+    textDecoration: TextDecoration;
+    whiteSpace: WhiteSpace;
+    wordBreak: WordBreak;
+    wordWrap: WordWrap;
+    textOverflow: TextOverflow;
     maxWidth: f32;
     maxHeight: f32;
     lineHeight: f32;
