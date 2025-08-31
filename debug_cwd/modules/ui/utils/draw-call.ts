@@ -5,6 +5,7 @@ import { Vertex } from '../types/vertex';
 import { Uniforms } from '../types/uniforms';
 import { PushConstants } from '../types/push-constants';
 import { VkPipelineBindPoint } from 'vulkan';
+import { VertexArray } from './vertex-array';
 
 export class DrawCall {
     private m_vertices: Render.Vertices;
@@ -83,20 +84,20 @@ export class DrawCall {
         if (index >= this.m_vertexCount) throw new RangeError(`Index out of bounds: ${index} >= ${this.m_vertexCount}`);
 
         const offset = index * this.m_vertexSize;
-        this.m_vertexDataView.setFloat32(offset, vertex.position.x, true);
-        this.m_vertexDataView.setFloat32(offset + 4, vertex.position.y, true);
-        this.m_vertexDataView.setFloat32(offset + 8, vertex.position.z, true);
-        this.m_vertexDataView.setFloat32(offset + 12, vertex.position.w, true);
+        this.m_vertexDataView.setFloat32(offset, vertex.x, true);
+        this.m_vertexDataView.setFloat32(offset + 4, vertex.y, true);
+        this.m_vertexDataView.setFloat32(offset + 8, vertex.z, true);
+        this.m_vertexDataView.setFloat32(offset + 12, vertex.w, true);
 
-        this.m_vertexDataView.setFloat32(offset + 16, vertex.color.x, true);
-        this.m_vertexDataView.setFloat32(offset + 20, vertex.color.y, true);
-        this.m_vertexDataView.setFloat32(offset + 24, vertex.color.z, true);
-        this.m_vertexDataView.setFloat32(offset + 28, vertex.color.w, true);
+        this.m_vertexDataView.setFloat32(offset + 16, vertex.r, true);
+        this.m_vertexDataView.setFloat32(offset + 20, vertex.g, true);
+        this.m_vertexDataView.setFloat32(offset + 24, vertex.b, true);
+        this.m_vertexDataView.setFloat32(offset + 28, vertex.a, true);
 
-        this.m_vertexDataView.setFloat32(offset + 32, vertex.uv.x, true);
-        this.m_vertexDataView.setFloat32(offset + 36, vertex.uv.y, true);
+        this.m_vertexDataView.setFloat32(offset + 32, vertex.u, true);
+        this.m_vertexDataView.setFloat32(offset + 36, vertex.v, true);
 
-        this.m_vertexDataView.setInt32(offset + 40, vertex.clipRectIndex, true);
+        this.m_vertexDataView.setInt32(offset + 40, vertex.instanceIdx, true);
 
         this.m_vertexDataDirty = true;
     }
@@ -104,6 +105,18 @@ export class DrawCall {
     addVertex(vertex: Vertex) {
         this.setVertex(this.m_usedVertices, vertex);
         this.m_usedVertices++;
+    }
+
+    addVertices(vertices: VertexArray) {
+        const remaining = this.m_vertexCount - this.m_usedVertices;
+        if (remaining < vertices.count) {
+            throw new Error(`Appending vertices would exceed the draw call capacity: ${remaining} < ${vertices.count}`);
+        }
+
+        vertices.copyTo(this.m_vertexDataView, this.m_usedVertices * this.m_vertexSize);
+
+        this.m_usedVertices += vertices.count;
+        this.m_vertexDataDirty = true;
     }
 
     beforeRenderPass(cb: Render.CommandBuffer) {

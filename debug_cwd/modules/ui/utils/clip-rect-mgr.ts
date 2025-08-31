@@ -3,17 +3,6 @@ import { Element } from '../renderer/element';
 import { ClientRect, Overflow } from '../types';
 import { VkBufferUsageFlags, VkMemoryPropertyFlags, VkSharingMode } from 'vulkan';
 
-type ClipRect = {
-    left: f32;
-    top: f32;
-    right: f32;
-    bottom: f32;
-    topLeftRadius: f32;
-    topRightRadius: f32;
-    bottomLeftRadius: f32;
-    bottomRightRadius: f32;
-};
-
 const CLIP_RECT_SIZE = 4 * 8;
 
 export class ClipRectManager {

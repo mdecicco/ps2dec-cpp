@@ -1,7 +1,11 @@
 import { vec4 } from 'math-ext';
 import { BorderStyle, ClientRect, Color, FontStyle, Overflow, TextAlign } from './style';
-import { Vertex } from './vertex';
-import { GeometryVertex } from './elements';
+import { VertexArray } from '../utils/vertex-array';
+
+export enum Direction {
+    Horizontal = 0,
+    Vertical = 1
+}
 
 export enum GeometryType {
     Box = 0,
@@ -28,7 +32,13 @@ export type TextGeometry = {
     width: f32;
     height: f32;
     offsetPosition: vec4;
-    vertices: Vertex[];
+    vertices: VertexArray;
+};
+
+export type BoxBorderProperties = {
+    width: f32;
+    color: Color;
+    style: BorderStyle;
 };
 
 export type BoxProperties = {
@@ -37,9 +47,10 @@ export type BoxProperties = {
     scrollY: f32;
     contentWidth: f32;
     contentHeight: f32;
-    borderWidth: f32;
-    borderColor: Color;
-    borderStyle: BorderStyle;
+    borderTop: BoxBorderProperties;
+    borderRight: BoxBorderProperties;
+    borderBottom: BoxBorderProperties;
+    borderLeft: BoxBorderProperties;
     overflow: Overflow;
     color: Color;
     verticalScrollBarHovered: boolean;
@@ -52,7 +63,7 @@ export type BoxGeometry = {
     type: GeometryType.Box;
     properties: BoxProperties;
     offsetPosition: vec4;
-    vertices: Vertex[];
+    vertices: VertexArray;
 };
 
 export type CustomGeometry = {
@@ -61,7 +72,7 @@ export type CustomGeometry = {
     offsetPosition: vec4;
     width: f32;
     height: f32;
-    vertices: GeometryVertex[];
+    vertices: VertexArray;
 };
 
 export type Geometry = TextGeometry | BoxGeometry | CustomGeometry;

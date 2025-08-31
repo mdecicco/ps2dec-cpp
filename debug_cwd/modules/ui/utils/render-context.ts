@@ -22,6 +22,8 @@ import { DrawCall } from './draw-call';
 import { TextDraw } from './text-draw';
 import { ClipRectManager } from './clip-rect-mgr';
 import { FontFamily } from './font-mgr';
+import { InstanceManager } from './instance-mgr';
+import { FragmentShader, VertexShader } from '../renderer/shaders';
 
 export class RenderContext {
     private m_window: Window;
@@ -45,7 +47,9 @@ export class RenderContext {
     private m_resizeListener: u32 | null;
     private m_currentFrame: Render.FrameContext | null;
     private m_clipRectManager: ClipRectManager;
+    private m_instanceManager: InstanceManager;
     private m_currentClipRectBuffer: Render.Buffer | null;
+    private m_currentInstanceBuffer: Render.Buffer | null;
     private m_renderPassStarted: boolean;
     private m_drawCalls: DrawCall[];
 
@@ -73,7 +77,9 @@ export class RenderContext {
         this.m_resizeListener = null;
         this.m_currentFrame = null;
         this.m_clipRectManager = new ClipRectManager(size.x, size.y);
+        this.m_instanceManager = new InstanceManager();
         this.m_currentClipRectBuffer = null;
+        this.m_currentInstanceBuffer = null;
         this.m_renderPassStarted = false;
         this.m_drawCalls = [];
     }
@@ -120,6 +126,10 @@ export class RenderContext {
 
     get clipRects() {
         return this.m_clipRectManager;
+    }
+
+    get instances() {
+        return this.m_instanceManager;
     }
 
     init() {
@@ -220,7 +230,7 @@ export class RenderContext {
         this.m_vertexFormat.addAttr(Render.DataType.Vec4f, 0, 1); // position
         this.m_vertexFormat.addAttr(Render.DataType.Vec4f, 16, 1); // color
         this.m_vertexFormat.addAttr(Render.DataType.Vec2f, 32, 1); // uv
-        this.m_vertexFormat.addAttr(Render.DataType.Int, 40, 1); // clipRectIndex
+        this.m_vertexFormat.addAttr(Render.DataType.Int, 40, 1); // instanceIdx
 
         this.m_uniformFormat = new Render.DataFormat();
         this.m_uniformFormat.addAttr(Render.DataType.Mat4f, 0, 1); // mvp
@@ -234,7 +244,11 @@ export class RenderContext {
             VkShaderStageFlags.VK_SHADER_STAGE_VERTEX_BIT | VkShaderStageFlags.VK_SHADER_STAGE_FRAGMENT_BIT
         );
         this.m_graphicsPipeline.addStorageBuffer(1, VkShaderStageFlags.VK_SHADER_STAGE_FRAGMENT_BIT);
-        this.m_graphicsPipeline.addSampler(2, VkShaderStageFlags.VK_SHADER_STAGE_FRAGMENT_BIT);
+        this.m_graphicsPipeline.addStorageBuffer(
+            2,
+            VkShaderStageFlags.VK_SHADER_STAGE_VERTEX_BIT | VkShaderStageFlags.VK_SHADER_STAGE_FRAGMENT_BIT
+        );
+        this.m_graphicsPipeline.addSampler(3, VkShaderStageFlags.VK_SHADER_STAGE_FRAGMENT_BIT);
         this.m_graphicsPipeline.addDynamicState(VkDynamicState.VK_DYNAMIC_STATE_VIEWPORT);
         this.m_graphicsPipeline.addDynamicState(VkDynamicState.VK_DYNAMIC_STATE_SCISSOR);
         this.m_graphicsPipeline.setColorBlendEnabled(true);
@@ -245,123 +259,8 @@ export class RenderContext {
         this.m_graphicsPipeline.setSrcAlphaBlendFactor(Render.BlendFactor.One);
         this.m_graphicsPipeline.setDstAlphaBlendFactor(Render.BlendFactor.OneMinusSrcAlpha);
 
-        this.m_graphicsPipeline.setVertexShader(`
-            #version 450
-
-            layout(std140, binding = 0) uniform Data {
-                mat4 mvp;
-                float fontPixelRange;
-                int isFont;
-            };
-
-            layout(location = 0) in vec4 position;
-            layout(location = 1) in vec4 color;
-            layout(location = 2) in vec2 uv;
-            layout(location = 3) in int clipRectIndex;
-
-            layout(location = 0) out vec4 v_color;
-            layout(location = 1) out vec2 v_uv;
-            layout(location = 2) flat out int v_clipRectIndex;
-            layout(location = 3) out vec2 v_pos;
-
-            void main() {
-                gl_Position = mvp * vec4(position.x, position.y, position.z, 1.0);
-                v_color = color;
-                v_uv = uv;
-                v_clipRectIndex = clipRectIndex;
-                v_pos = position.xy;
-            }
-        `);
-        this.m_graphicsPipeline.setFragmentShader(`
-            #version 450
-
-            struct ClippingInfo {
-                float left;
-                float top;
-                float right;
-                float bottom;
-                float topLeftRadius;
-                float topRightRadius;
-                float bottomLeftRadius;
-                float bottomRightRadius;
-            };
-
-            layout(std140, binding = 0) uniform Data {
-                mat4 mvp;
-                float fontPixelRange;
-                int isFont;
-            };
-
-            layout(std140, binding = 1) buffer ClipRectBuffer {
-                ClippingInfo clipRects[];
-            };
-
-            layout(binding = 2) uniform sampler2D fontAtlas;
-
-            layout(location = 0) in vec4 v_color;
-            layout(location = 1) in vec2 v_uv;
-            layout(location = 2) flat in int v_clipRectIndex;
-            layout(location = 3) in vec2 v_pos;
-
-            layout(location = 0) out vec4 outColor;
-
-            float screenPxRange() {
-                vec2 unitRange = vec2(fontPixelRange) / vec2(textureSize(fontAtlas, 0));
-                vec2 screenTexSize = vec2(1.0) / fwidth(v_uv);
-                return max(0.5 * dot(unitRange, screenTexSize), 1.0);
-            }
-
-            float median(float r, float g, float b) {
-                return max(min(r, g), min(max(r, g), b));
-            }
-
-            void main() {
-                if (v_clipRectIndex != -1) {
-                    ClippingInfo clip = clipRects[v_clipRectIndex];
-                    if (v_pos.x < clip.left) discard;
-                    if (v_pos.x > clip.right) discard;
-                    if (v_pos.y < clip.top) discard;
-                    if (v_pos.y > clip.bottom) discard;
-
-                    float bl = clip.bottomLeftRadius;
-
-                    // Check which corner we're potentially in
-                    bool inTopLeft = v_pos.x < clip.left + clip.topLeftRadius && v_pos.y < clip.top + clip.topLeftRadius;
-                    bool inTopRight = v_pos.x > clip.right - clip.topRightRadius && v_pos.y < clip.top + clip.topRightRadius;
-                    bool inBottomRight = v_pos.x > clip.right - clip.bottomRightRadius && v_pos.y > clip.bottom - clip.bottomRightRadius;
-                    bool inBottomLeft = v_pos.x < clip.left + clip.bottomLeftRadius && v_pos.y > clip.bottom - clip.bottomLeftRadius;
-                    
-                    // Only test corners that have non-zero radius and we're actually in
-                    if (inTopLeft && clip.topLeftRadius > 0.0) {
-                        vec2 center = vec2(clip.left + clip.topLeftRadius, clip.top + clip.topLeftRadius);
-                        vec2 diff = v_pos - center;
-                        if (dot(diff, diff) > clip.topLeftRadius * clip.topLeftRadius) discard;
-                    } else if (inTopRight && clip.topRightRadius > 0.0) {
-                        vec2 center = vec2(clip.right - clip.topRightRadius, clip.top + clip.topRightRadius);
-                        vec2 diff = v_pos - center;
-                        if (dot(diff, diff) > clip.topRightRadius * clip.topRightRadius) discard;
-                    } else if (inBottomRight && clip.bottomRightRadius > 0.0) {
-                        vec2 center = vec2(clip.right - clip.bottomRightRadius, clip.bottom - clip.bottomRightRadius);
-                        vec2 diff = v_pos - center;
-                        if (dot(diff, diff) > clip.bottomRightRadius * clip.bottomRightRadius) discard;
-                    } else if (inBottomLeft && clip.bottomLeftRadius > 0.0) {
-                        vec2 center = vec2(clip.left + clip.bottomLeftRadius, clip.bottom - clip.bottomLeftRadius);
-                        vec2 diff = v_pos - center;
-                        if (dot(diff, diff) > clip.bottomLeftRadius * clip.bottomLeftRadius) discard;
-                    }
-                }
-
-                if (isFont == 1) {
-                    vec4 msd = texture(fontAtlas, v_uv);
-                    float sd = median(msd.r, msd.g, msd.b);
-                    float screenPxDistance = screenPxRange() * (sd - 0.25);
-                    float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
-                    outColor = mix(vec4(0.0), v_color, opacity);
-                } else {
-                    outColor = v_color;
-                }
-            }
-        `);
+        this.m_graphicsPipeline.setVertexShader(VertexShader);
+        this.m_graphicsPipeline.setFragmentShader(FragmentShader);
 
         if (!this.m_graphicsPipeline.init()) {
             this.shutdown();
@@ -448,6 +347,10 @@ export class RenderContext {
             this.m_currentClipRectBuffer.destroy();
         }
 
+        if (this.m_currentInstanceBuffer) {
+            this.m_currentInstanceBuffer.destroy();
+        }
+
         if (this.m_defaultTexture) this.m_defaultTexture.destroy();
         if (this.m_dsFactory) this.m_dsFactory.destroy();
         if (this.m_uboFactory) this.m_uboFactory.destroy();
@@ -497,6 +400,7 @@ export class RenderContext {
         this.m_renderPassStarted = false;
         this.m_drawCalls = [];
         this.m_currentClipRectBuffer = null;
+        this.m_currentInstanceBuffer = null;
     }
 
     onResize(width: u32, height: u32) {
@@ -528,7 +432,7 @@ export class RenderContext {
 
         ds.addUniformObject(uniforms, 0);
         // ds.addStorageBuffer(clipRectBuffer, 1);
-        ds.addTexture(defaultTexture, 2);
+        ds.addTexture(defaultTexture, 3);
         // ds.update();
 
         const call = new DrawCall(vertices, uniforms, ds, vertexCount, vertexFormat.getSize());
@@ -547,7 +451,7 @@ export class RenderContext {
 
         ds.addUniformObject(uniforms, 0);
         // ds.addStorageBuffer(clipRectBuffer, 1);
-        ds.addTexture(fontFamily.atlas!.texture, 2);
+        ds.addTexture(fontFamily.atlas!.texture, 3);
         // ds.update();
 
         const call = new DrawCall(vertices, uniforms, ds, vertexCount, vertexFormat.getSize());
@@ -599,18 +503,27 @@ export class RenderContext {
         const { logicalDevice, graphicsPipeline, windowSize } = this.renderContext;
         const cb = this.m_currentFrame.getCommandBuffer();
 
+        this.m_logicalDevice!.waitForIdle();
+
         if (this.m_currentClipRectBuffer) {
-            this.m_logicalDevice!.waitForIdle();
             this.m_currentClipRectBuffer.shutdown();
             this.m_currentClipRectBuffer.destroy();
             this.m_currentClipRectBuffer = null;
         }
 
+        if (this.m_currentInstanceBuffer) {
+            this.m_currentInstanceBuffer.shutdown();
+            this.m_currentInstanceBuffer.destroy();
+            this.m_currentInstanceBuffer = null;
+        }
+
         this.m_currentClipRectBuffer = this.m_clipRectManager.generateBuffer(logicalDevice);
+        this.m_currentInstanceBuffer = this.m_instanceManager.generateBuffer(logicalDevice);
 
         this.m_drawCalls.forEach(dc => {
             const descriptorSet = dc.descriptorSet;
             descriptorSet.addStorageBuffer(this.m_currentClipRectBuffer!, 1);
+            descriptorSet.addStorageBuffer(this.m_currentInstanceBuffer!, 2);
             descriptorSet.update();
             dc.beforeRenderPass(cb);
         });

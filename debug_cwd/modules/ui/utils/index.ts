@@ -3,6 +3,8 @@ export * from './render-context';
 export * from './draw-call';
 export * from './text-draw';
 export * from './font-mgr';
+export * from './vertex-array';
+export * from './instance-mgr';
 
 import { Color, ParsedStyleAttributes, ParsedStyleProps, Size, SizeUnit, StyleAttributes, StyleProps } from '../types';
 import { StyleParser } from './parser';
@@ -46,9 +48,18 @@ export function defaultStyle(): StyleAttributes {
         textOverflow: 'clip',
         color: 'rgba(0, 0, 0, 1)',
         backgroundColor: 'rgba(0, 0, 0, 0)',
-        borderWidth: '0px',
-        borderColor: 'rgba(0, 0, 0, 1)',
-        borderStyle: 'none',
+        borderTopWidth: '0px',
+        borderTopColor: 'rgba(0, 0, 0, 1)',
+        borderTopStyle: 'none',
+        borderRightWidth: '0px',
+        borderRightColor: 'rgba(0, 0, 0, 1)',
+        borderRightStyle: 'none',
+        borderBottomWidth: '0px',
+        borderBottomColor: 'rgba(0, 0, 0, 1)',
+        borderBottomStyle: 'none',
+        borderLeftWidth: '0px',
+        borderLeftColor: 'rgba(0, 0, 0, 1)',
+        borderLeftStyle: 'none',
         borderTopLeftRadius: '0px',
         borderTopRightRadius: '0px',
         borderBottomLeftRadius: '0px',

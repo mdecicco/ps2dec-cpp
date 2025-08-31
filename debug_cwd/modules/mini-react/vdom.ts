@@ -137,11 +137,6 @@ export class TreeNode extends EventProducer<TreeNodeEvents> {
         this.m_contexts = null;
     }
 
-    private addChild(node: TreeNode) {
-        node.m_indexInParent = this.m_children.length;
-        this.m_children.push(node);
-    }
-
     private findMatchingChild(element: TreeNode): TreeNode | null {
         for (const child of this.m_children) {
             if (child.matches(element)) return child;
@@ -150,19 +145,10 @@ export class TreeNode extends EventProducer<TreeNodeEvents> {
         return null;
     }
 
-    private handleGeneratedDirectChild(
-        child: TreeNode,
-        updateMap: Map<TreeNode, ComponentProps<any>>,
-        addNodes: TreeNode[]
-    ) {
-        const replaces = this.findMatchingChild(child);
-        if (replaces) updateMap.set(replaces, child.props);
-        else addNodes.push(child);
-    }
-
     private handleGeneratorResult(result: ReactNode) {
         const updateNodes: Map<TreeNode, ComponentProps<any>> = new Map();
         const addNodes: TreeNode[] = [];
+        const newChildren: TreeNode[] = [];
 
         const directChildren = flattenChildren(result);
         let c = 0;
@@ -170,29 +156,34 @@ export class TreeNode extends EventProducer<TreeNodeEvents> {
             const childNode = TreeNode.fromReactNode(this.m_root, child, this);
             if (childNode) {
                 childNode.m_indexInParent = c;
-                this.handleGeneratedDirectChild(childNode, updateNodes, addNodes);
+
+                const replaces = this.findMatchingChild(childNode);
+                if (replaces) {
+                    updateNodes.set(replaces, childNode.props);
+                    replaces.m_indexInParent = c;
+                    newChildren.push(replaces);
+                } else {
+                    addNodes.push(childNode);
+                    newChildren.push(childNode);
+                }
+
                 c++;
             }
         }
+
+        for (let i = this.m_children.length - 1; i >= 0; i--) {
+            if (!updateNodes.has(this.m_children[i])) {
+                this.m_children[i].onUnmount();
+            }
+        }
+
+        this.m_children = newChildren;
 
         for (const [node, props] of updateNodes) {
             node.render(props);
         }
 
-        const removeIndices: number[] = [];
-        for (let i = this.m_children.length - 1; i >= 0; i--) {
-            if (!updateNodes.has(this.m_children[i])) {
-                removeIndices.push(i);
-                this.m_children[i].onUnmount();
-            }
-        }
-
-        for (const index of removeIndices) {
-            this.m_children.splice(index, 1);
-        }
-
         for (const element of addNodes) {
-            this.addChild(element);
             element.render(element.props);
         }
     }
@@ -379,7 +370,7 @@ export class ReactRoot {
     }
 
     /** @internal */
-    private processRenderQueue(depth: number = 0) {
+    private processRenderQueue() {
         if (!this.m_rootNode || this.m_renderQueue.length === 0) return;
 
         const rerenderQueue = this.m_renderQueue;
@@ -392,10 +383,6 @@ export class ReactRoot {
         });
 
         this.m_isRendering = false;
-
-        if (depth === 0) {
-            this.processRenderQueue(depth + 1);
-        }
 
         this.onAfterRender(this.m_rootNode);
     }

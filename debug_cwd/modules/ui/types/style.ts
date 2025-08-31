@@ -34,9 +34,18 @@ export type StyleAttributes = {
     textOverflow: 'clip' | 'ellipsis' | 'unset';
     color: string;
     backgroundColor: string;
-    borderWidth: string;
-    borderColor: string;
-    borderStyle: 'none' | 'hidden' | 'dotted' | 'dashed' | 'solid' | 'double';
+    borderTopWidth: string;
+    borderRightWidth: string;
+    borderBottomWidth: string;
+    borderLeftWidth: string;
+    borderTopColor: string;
+    borderRightColor: string;
+    borderBottomColor: string;
+    borderLeftColor: string;
+    borderTopStyle: 'none' | 'hidden' | 'dotted' | 'dashed' | 'solid' | 'double';
+    borderRightStyle: 'none' | 'hidden' | 'dotted' | 'dashed' | 'solid' | 'double';
+    borderBottomStyle: 'none' | 'hidden' | 'dotted' | 'dashed' | 'solid' | 'double';
+    borderLeftStyle: 'none' | 'hidden' | 'dotted' | 'dashed' | 'solid' | 'double';
     borderTopLeftRadius: string;
     borderTopRightRadius: string;
     borderBottomLeftRadius: string;
@@ -57,6 +66,9 @@ export type ShorthandStyleAttributes = {
     padding: string;
     margin: string;
     borderRadius: string;
+    borderWidth: string;
+    borderColor: string;
+    borderStyle: 'none' | 'hidden' | 'dotted' | 'dashed' | 'solid' | 'double';
 };
 
 export type StyleProps = Partial<StyleAttributes & ShorthandStyleAttributes>;
@@ -180,10 +192,17 @@ export type Color = {
     a: number;
 };
 
-export type Border = {
+export type BorderComponent = {
     width: Size;
     color: Color;
     style: BorderStyle;
+};
+
+export type Border = {
+    top: BorderComponent;
+    right: BorderComponent;
+    bottom: BorderComponent;
+    left: BorderComponent;
     topLeftRadius: Size;
     topRightRadius: Size;
     bottomLeftRadius: Size;

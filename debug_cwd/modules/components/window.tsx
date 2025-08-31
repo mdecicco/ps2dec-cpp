@@ -46,6 +46,8 @@ export const WindowProvider: React.FC<WindowProps> = props => {
     React.useEffect(() => {
         const sz = window.getSize();
         const p = window.getPosition();
+        const open = window.isOpen();
+        const focused = window.isFocused();
 
         if (sz.x !== size.width || sz.y !== size.height) {
             setSize({ width: sz.x, height: sz.y });
@@ -53,6 +55,14 @@ export const WindowProvider: React.FC<WindowProps> = props => {
 
         if (p.x !== position.x || p.y !== position.y) {
             setPosition({ x: p.x, y: p.y });
+        }
+
+        if (open !== isOpen) {
+            setIsOpen(open);
+        }
+
+        if (focused !== isFocused) {
+            setIsFocused(focused);
         }
 
         const openListener = window.onOpen(() => {

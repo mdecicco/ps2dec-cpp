@@ -1,15 +1,31 @@
-import { vec2, vec4 } from 'math-ext';
-
 export class Vertex {
-    position: vec4;
-    color: vec4;
-    uv: vec2;
-    clipRectIndex: i32;
+    x: f32;
+    y: f32;
+    z: f32;
+    w: f32;
+    r: f32;
+    g: f32;
+    b: f32;
+    a: f32;
+    u: f32;
+    v: f32;
+    instanceIdx: i32;
 
-    constructor(position: vec4, color: vec4, uv?: vec2, clipRectIndex?: i32) {
-        this.position = position;
-        this.color = color;
-        this.uv = uv || new vec2(0, 0);
-        this.clipRectIndex = clipRectIndex || -1;
+    constructor(x: f32, y: f32, z: f32, w: f32, r: f32, g: f32, b: f32, a: f32, u: f32, v: f32, instanceIdx: i32) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.w = w;
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
+        this.u = u;
+        this.v = v;
+        this.instanceIdx = instanceIdx;
+    }
+
+    static get size() {
+        return 4 * 11;
     }
 }

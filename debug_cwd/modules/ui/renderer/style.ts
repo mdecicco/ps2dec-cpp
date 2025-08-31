@@ -94,7 +94,7 @@ export class Style {
     set minWidth(value: Size | null) {
         if (!isChanged(value, this.m_styleData.minWidth)) return;
 
-        this.m_styleData.minWidth = value;
+        this.m_styleData.minWidth = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetMinWidthPercent(this.m_yogaNode, value.value);
@@ -113,7 +113,7 @@ export class Style {
     set minHeight(value: Size | null) {
         if (!isChanged(value, this.m_styleData.minHeight)) return;
 
-        this.m_styleData.minHeight = value;
+        this.m_styleData.minHeight = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetMinHeightPercent(this.m_yogaNode, value.value);
@@ -132,7 +132,7 @@ export class Style {
     set maxWidth(value: Size | null) {
         if (!isChanged(value, this.m_styleData.maxWidth)) return;
 
-        this.m_styleData.maxWidth = value;
+        this.m_styleData.maxWidth = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetMaxWidthPercent(this.m_yogaNode, value.value);
@@ -151,7 +151,7 @@ export class Style {
     set maxHeight(value: Size | null) {
         if (!isChanged(value, this.m_styleData.maxHeight)) return;
 
-        this.m_styleData.maxHeight = value;
+        this.m_styleData.maxHeight = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetMaxHeightPercent(this.m_yogaNode, value.value);
@@ -170,7 +170,7 @@ export class Style {
     set width(value: Size | null) {
         if (!isChanged(value, this.m_styleData.width)) return;
 
-        this.m_styleData.width = value;
+        this.m_styleData.width = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetWidthPercent(this.m_yogaNode, value.value);
@@ -189,7 +189,7 @@ export class Style {
     set height(value: Size | null) {
         if (!isChanged(value, this.m_styleData.height)) return;
 
-        this.m_styleData.height = value;
+        this.m_styleData.height = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetHeightPercent(this.m_yogaNode, value.value);
@@ -237,7 +237,7 @@ export class Style {
     set top(value: Size | null) {
         if (!isChanged(value, this.m_styleData.top)) return;
 
-        this.m_styleData.top = value;
+        this.m_styleData.top = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetPositionPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeTop, value.value);
@@ -260,7 +260,7 @@ export class Style {
     set right(value: Size | null) {
         if (!isChanged(value, this.m_styleData.right)) return;
 
-        this.m_styleData.right = value;
+        this.m_styleData.right = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetPositionPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeRight, value.value);
@@ -283,7 +283,7 @@ export class Style {
     set bottom(value: Size | null) {
         if (!isChanged(value, this.m_styleData.bottom)) return;
 
-        this.m_styleData.bottom = value;
+        this.m_styleData.bottom = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetPositionPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeBottom, value.value);
@@ -306,7 +306,7 @@ export class Style {
     set left(value: Size | null) {
         if (!isChanged(value, this.m_styleData.left)) return;
 
-        this.m_styleData.left = value;
+        this.m_styleData.left = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetPositionPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeLeft, value.value);
@@ -463,7 +463,7 @@ export class Style {
     set flexBasis(value: Size | null) {
         if (!isChanged(value, this.m_styleData.flex.basis)) return;
 
-        this.m_styleData.flex.basis = value;
+        this.m_styleData.flex.basis = value ? Object.assign({}, value) : null;
         if (value) {
             if (value.unit === SizeUnit.percent) {
                 Yoga.YGNodeStyleSetFlexBasisPercent(this.m_yogaNode, value.value);
@@ -488,7 +488,7 @@ export class Style {
     set gap(value: Size) {
         if (!isChanged(value, this.m_styleData.flex.gap)) return;
 
-        this.m_styleData.flex.gap = value;
+        this.m_styleData.flex.gap = Object.assign({}, value);
         if (value.unit === SizeUnit.percent) {
             Yoga.YGNodeStyleSetGapPercent(this.m_yogaNode, Yoga.YGGutter.YGGutterColumn, value.value);
             Yoga.YGNodeStyleSetGapPercent(this.m_yogaNode, Yoga.YGGutter.YGGutterRow, value.value);
@@ -513,7 +513,7 @@ export class Style {
     set lineHeight(value: Size) {
         if (!isChanged(value, this.m_styleData.lineHeight)) return;
 
-        this.m_styleData.lineHeight = value;
+        this.m_styleData.lineHeight = Object.assign({}, value);
     }
 
     get lineHeight() {
@@ -523,7 +523,7 @@ export class Style {
     set letterSpacing(value: Size) {
         if (!isChanged(value, this.m_styleData.letterSpacing)) return;
 
-        this.m_styleData.letterSpacing = value;
+        this.m_styleData.letterSpacing = Object.assign({}, value);
     }
 
     get letterSpacing() {
@@ -533,7 +533,7 @@ export class Style {
     set fontSize(value: Size) {
         if (!isChanged(value, this.m_styleData.fontSize)) return;
 
-        this.m_styleData.fontSize = value;
+        this.m_styleData.fontSize = Object.assign({}, value);
     }
 
     get fontSize() {
@@ -655,7 +655,7 @@ export class Style {
     set color(value: Color) {
         if (!isChanged(value, this.m_styleData.color)) return;
 
-        this.m_styleData.color = value;
+        this.m_styleData.color = Object.assign({}, value);
     }
 
     get color() {
@@ -665,7 +665,7 @@ export class Style {
     set backgroundColor(value: Color) {
         if (!isChanged(value, this.m_styleData.backgroundColor)) return;
 
-        this.m_styleData.backgroundColor = value;
+        this.m_styleData.backgroundColor = Object.assign({}, value);
     }
 
     get backgroundColor() {
@@ -673,20 +673,39 @@ export class Style {
     }
 
     set borderWidth(value: Size) {
-        if (!isChanged(value, this.m_styleData.border.width)) return;
+        this.borderTopWidth = value;
+        this.borderRightWidth = value;
+        this.borderBottomWidth = value;
+        this.borderLeftWidth = value;
+    }
 
-        this.m_styleData.border.width = value;
-        Yoga.YGNodeStyleSetBorder(
-            this.m_yogaNode,
-            Yoga.YGEdge.YGEdgeLeft,
-            this.resolveSize(value, Direction.Horizontal)
-        );
+    set borderTopWidth(value: Size) {
+        if (!isChanged(value, this.m_styleData.border.top.width)) return;
+        this.m_styleData.border.top.width = Object.assign({}, value);
+        Yoga.YGNodeStyleSetBorder(this.m_yogaNode, Yoga.YGEdge.YGEdgeTop, this.resolveSize(value, Direction.Vertical));
+    }
+
+    get borderTopWidth() {
+        return this.m_styleData.border.top.width;
+    }
+
+    set borderRightWidth(value: Size) {
+        if (!isChanged(value, this.m_styleData.border.right.width)) return;
+        this.m_styleData.border.right.width = Object.assign({}, value);
         Yoga.YGNodeStyleSetBorder(
             this.m_yogaNode,
             Yoga.YGEdge.YGEdgeRight,
             this.resolveSize(value, Direction.Horizontal)
         );
-        Yoga.YGNodeStyleSetBorder(this.m_yogaNode, Yoga.YGEdge.YGEdgeTop, this.resolveSize(value, Direction.Vertical));
+    }
+
+    get borderRightWidth() {
+        return this.m_styleData.border.right.width;
+    }
+
+    set borderBottomWidth(value: Size) {
+        if (!isChanged(value, this.m_styleData.border.bottom.width)) return;
+        this.m_styleData.border.bottom.width = Object.assign({}, value);
         Yoga.YGNodeStyleSetBorder(
             this.m_yogaNode,
             Yoga.YGEdge.YGEdgeBottom,
@@ -694,47 +713,121 @@ export class Style {
         );
     }
 
-    get borderWidth() {
-        return this.m_styleData.border.width;
+    get borderBottomWidth() {
+        return this.m_styleData.border.bottom.width;
+    }
+
+    set borderLeftWidth(value: Size) {
+        if (!isChanged(value, this.m_styleData.border.left.width)) return;
+        this.m_styleData.border.left.width = Object.assign({}, value);
+        Yoga.YGNodeStyleSetBorder(
+            this.m_yogaNode,
+            Yoga.YGEdge.YGEdgeLeft,
+            this.resolveSize(value, Direction.Horizontal)
+        );
+    }
+
+    get borderLeftWidth() {
+        return this.m_styleData.border.left.width;
     }
 
     set borderColor(value: Color) {
-        if (!isChanged(value, this.m_styleData.border.color)) return;
-
-        this.m_styleData.border.color = value;
+        this.borderTopColor = value;
+        this.borderRightColor = value;
+        this.borderBottomColor = value;
+        this.borderLeftColor = value;
     }
 
-    get borderColor() {
-        return this.m_styleData.border.color;
+    set borderTopColor(value: Color) {
+        if (!isChanged(value, this.m_styleData.border.top.color)) return;
+        this.m_styleData.border.top.color = Object.assign({}, value);
+    }
+
+    get borderTopColor() {
+        return this.m_styleData.border.top.color;
+    }
+
+    set borderRightColor(value: Color) {
+        if (!isChanged(value, this.m_styleData.border.right.color)) return;
+        this.m_styleData.border.right.color = Object.assign({}, value);
+    }
+
+    get borderRightColor() {
+        return this.m_styleData.border.right.color;
+    }
+
+    set borderBottomColor(value: Color) {
+        if (!isChanged(value, this.m_styleData.border.bottom.color)) return;
+        this.m_styleData.border.bottom.color = Object.assign({}, value);
+    }
+
+    get borderBottomColor() {
+        return this.m_styleData.border.bottom.color;
+    }
+
+    set borderLeftColor(value: Color) {
+        if (!isChanged(value, this.m_styleData.border.left.color)) return;
+        this.m_styleData.border.left.color = Object.assign({}, value);
+    }
+
+    get borderLeftColor() {
+        return this.m_styleData.border.left.color;
     }
 
     set borderStyle(value: BorderStyle) {
-        if (value === this.m_styleData.border.style) return;
-
-        this.m_styleData.border.style = value;
+        this.borderTopStyle = value;
+        this.borderRightStyle = value;
+        this.borderBottomStyle = value;
+        this.borderLeftStyle = value;
     }
 
-    get borderStyle() {
-        return this.m_styleData.border.style;
+    set borderTopStyle(value: BorderStyle) {
+        if (value === this.m_styleData.border.top.style) return;
+        this.m_styleData.border.top.style = value;
+    }
+
+    get borderTopStyle() {
+        return this.m_styleData.border.top.style;
+    }
+
+    set borderRightStyle(value: BorderStyle) {
+        if (value === this.m_styleData.border.right.style) return;
+        this.m_styleData.border.right.style = value;
+    }
+
+    get borderRightStyle() {
+        return this.m_styleData.border.right.style;
+    }
+
+    set borderBottomStyle(value: BorderStyle) {
+        if (value === this.m_styleData.border.bottom.style) return;
+        this.m_styleData.border.bottom.style = value;
+    }
+
+    get borderBottomStyle() {
+        return this.m_styleData.border.bottom.style;
+    }
+
+    set borderLeftStyle(value: BorderStyle) {
+        if (value === this.m_styleData.border.left.style) return;
+        this.m_styleData.border.left.style = value;
+    }
+
+    get borderLeftStyle() {
+        return this.m_styleData.border.left.style;
     }
 
     set borderRadius(value: Size) {
-        if (!isChanged(value, this.m_styleData.border.topLeftRadius)) return;
-
-        this.m_styleData.border.topLeftRadius = value;
-        this.m_styleData.border.topRightRadius = value;
-        this.m_styleData.border.bottomLeftRadius = value;
-        this.m_styleData.border.bottomRightRadius = value;
-    }
-
-    get borderRadius() {
-        return this.m_styleData.border.topLeftRadius;
+        this.borderTopLeftRadius = value;
+        this.borderTopRightRadius = value;
+        this.borderBottomLeftRadius = value;
+        this.borderBottomRightRadius = value;
     }
 
     set borderTopLeftRadius(value: Size) {
         if (!isChanged(value, this.m_styleData.border.topLeftRadius)) return;
 
-        this.m_styleData.border.topLeftRadius = value;
+        this.m_styleData.border.topLeftRadius = Object.assign({}, value);
     }
 
     get borderTopLeftRadius() {
@@ -744,7 +837,7 @@ export class Style {
     set borderTopRightRadius(value: Size) {
         if (!isChanged(value, this.m_styleData.border.topRightRadius)) return;
 
-        this.m_styleData.border.topRightRadius = value;
+        this.m_styleData.border.topRightRadius = Object.assign({}, value);
     }
 
     get borderTopRightRadius() {
@@ -754,7 +847,7 @@ export class Style {
     set borderBottomLeftRadius(value: Size) {
         if (!isChanged(value, this.m_styleData.border.bottomLeftRadius)) return;
 
-        this.m_styleData.border.bottomLeftRadius = value;
+        this.m_styleData.border.bottomLeftRadius = Object.assign({}, value);
     }
 
     get borderBottomLeftRadius() {
@@ -764,7 +857,7 @@ export class Style {
     set borderBottomRightRadius(value: Size) {
         if (!isChanged(value, this.m_styleData.border.bottomRightRadius)) return;
 
-        this.m_styleData.border.bottomRightRadius = value;
+        this.m_styleData.border.bottomRightRadius = Object.assign({}, value);
     }
 
     get borderBottomRightRadius() {
@@ -772,71 +865,16 @@ export class Style {
     }
 
     set margin(value: Size) {
-        if (isChanged(value, this.m_styleData.margin.left)) {
-            this.m_styleData.margin.left = value;
-
-            if (value.unit === SizeUnit.percent) {
-                Yoga.YGNodeStyleSetMarginPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeLeft, value.value);
-            } else {
-                Yoga.YGNodeStyleSetMargin(
-                    this.m_yogaNode,
-                    Yoga.YGEdge.YGEdgeLeft,
-                    this.resolveSize(value, Direction.Horizontal)
-                );
-            }
-        }
-
-        if (isChanged(value, this.m_styleData.margin.right)) {
-            this.m_styleData.margin.right = value;
-
-            if (value.unit === SizeUnit.percent) {
-                Yoga.YGNodeStyleSetMarginPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeRight, value.value);
-            } else {
-                Yoga.YGNodeStyleSetMargin(
-                    this.m_yogaNode,
-                    Yoga.YGEdge.YGEdgeRight,
-                    this.resolveSize(value, Direction.Horizontal)
-                );
-            }
-        }
-
-        if (isChanged(value, this.m_styleData.margin.top)) {
-            this.m_styleData.margin.top = value;
-
-            if (value.unit === SizeUnit.percent) {
-                Yoga.YGNodeStyleSetMarginPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeTop, value.value);
-            } else {
-                Yoga.YGNodeStyleSetMargin(
-                    this.m_yogaNode,
-                    Yoga.YGEdge.YGEdgeTop,
-                    this.resolveSize(value, Direction.Vertical)
-                );
-            }
-        }
-
-        if (isChanged(value, this.m_styleData.margin.bottom)) {
-            this.m_styleData.margin.bottom = value;
-
-            if (value.unit === SizeUnit.percent) {
-                Yoga.YGNodeStyleSetMarginPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeBottom, value.value);
-            } else {
-                Yoga.YGNodeStyleSetMargin(
-                    this.m_yogaNode,
-                    Yoga.YGEdge.YGEdgeBottom,
-                    this.resolveSize(value, Direction.Vertical)
-                );
-            }
-        }
-    }
-
-    get margin(): Margin {
-        return this.m_styleData.margin;
+        this.marginLeft = value;
+        this.marginRight = value;
+        this.marginTop = value;
+        this.marginBottom = value;
     }
 
     set marginLeft(value: Size) {
         if (!isChanged(value, this.m_styleData.margin.left)) return;
 
-        this.m_styleData.margin.left = value;
+        this.m_styleData.margin.left = Object.assign({}, value);
         if (value.unit === SizeUnit.percent) {
             Yoga.YGNodeStyleSetMarginPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeLeft, value.value);
         } else {
@@ -855,7 +893,7 @@ export class Style {
     set marginRight(value: Size) {
         if (!isChanged(value, this.m_styleData.margin.right)) return;
 
-        this.m_styleData.margin.right = value;
+        this.m_styleData.margin.right = Object.assign({}, value);
         if (value.unit === SizeUnit.percent) {
             Yoga.YGNodeStyleSetMarginPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeRight, value.value);
         } else {
@@ -874,7 +912,7 @@ export class Style {
     set marginTop(value: Size) {
         if (!isChanged(value, this.m_styleData.margin.top)) return;
 
-        this.m_styleData.margin.top = value;
+        this.m_styleData.margin.top = Object.assign({}, value);
         if (value.unit === SizeUnit.percent) {
             Yoga.YGNodeStyleSetMarginPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeTop, value.value);
         } else {
@@ -893,7 +931,7 @@ export class Style {
     set marginBottom(value: Size) {
         if (!isChanged(value, this.m_styleData.margin.bottom)) return;
 
-        this.m_styleData.margin.bottom = value;
+        this.m_styleData.margin.bottom = Object.assign({}, value);
         if (value.unit === SizeUnit.percent) {
             Yoga.YGNodeStyleSetMarginPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeBottom, value.value);
         } else {
@@ -910,71 +948,16 @@ export class Style {
     }
 
     set padding(value: Size) {
-        if (isChanged(value, this.m_styleData.padding.left)) {
-            this.m_styleData.padding.left = value;
-
-            if (value.unit === SizeUnit.percent) {
-                Yoga.YGNodeStyleSetPaddingPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeLeft, value.value);
-            } else {
-                Yoga.YGNodeStyleSetPadding(
-                    this.m_yogaNode,
-                    Yoga.YGEdge.YGEdgeLeft,
-                    this.resolveSize(value, Direction.Horizontal)
-                );
-            }
-        }
-
-        if (isChanged(value, this.m_styleData.padding.right)) {
-            this.m_styleData.padding.right = value;
-
-            if (value.unit === SizeUnit.percent) {
-                Yoga.YGNodeStyleSetPaddingPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeRight, value.value);
-            } else {
-                Yoga.YGNodeStyleSetPadding(
-                    this.m_yogaNode,
-                    Yoga.YGEdge.YGEdgeRight,
-                    this.resolveSize(value, Direction.Horizontal)
-                );
-            }
-        }
-
-        if (isChanged(value, this.m_styleData.padding.top)) {
-            this.m_styleData.padding.top = value;
-
-            if (value.unit === SizeUnit.percent) {
-                Yoga.YGNodeStyleSetPaddingPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeTop, value.value);
-            } else {
-                Yoga.YGNodeStyleSetPadding(
-                    this.m_yogaNode,
-                    Yoga.YGEdge.YGEdgeTop,
-                    this.resolveSize(value, Direction.Vertical)
-                );
-            }
-        }
-
-        if (isChanged(value, this.m_styleData.padding.bottom)) {
-            this.m_styleData.padding.bottom = value;
-
-            if (value.unit === SizeUnit.percent) {
-                Yoga.YGNodeStyleSetPaddingPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeBottom, value.value);
-            } else {
-                Yoga.YGNodeStyleSetPadding(
-                    this.m_yogaNode,
-                    Yoga.YGEdge.YGEdgeBottom,
-                    this.resolveSize(value, Direction.Vertical)
-                );
-            }
-        }
-    }
-
-    get padding(): Padding {
-        return this.m_styleData.padding;
+        this.paddingLeft = value;
+        this.paddingRight = value;
+        this.paddingTop = value;
+        this.paddingBottom = value;
     }
 
     set paddingLeft(value: Size) {
         if (!isChanged(value, this.m_styleData.padding.left)) return;
 
-        this.m_styleData.padding.left = value;
+        this.m_styleData.padding.left = Object.assign({}, value);
         if (value.unit === SizeUnit.percent) {
             Yoga.YGNodeStyleSetPaddingPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeLeft, value.value);
         } else {
@@ -993,7 +976,7 @@ export class Style {
     set paddingRight(value: Size) {
         if (!isChanged(value, this.m_styleData.padding.right)) return;
 
-        this.m_styleData.padding.right = value;
+        this.m_styleData.padding.right = Object.assign({}, value);
         if (value.unit === SizeUnit.percent) {
             Yoga.YGNodeStyleSetPaddingPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeRight, value.value);
         } else {
@@ -1012,7 +995,7 @@ export class Style {
     set paddingTop(value: Size) {
         if (!isChanged(value, this.m_styleData.padding.top)) return;
 
-        this.m_styleData.padding.top = value;
+        this.m_styleData.padding.top = Object.assign({}, value);
         if (value.unit === SizeUnit.percent) {
             Yoga.YGNodeStyleSetPaddingPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeTop, value.value);
         } else {
@@ -1031,7 +1014,7 @@ export class Style {
     set paddingBottom(value: Size) {
         if (!isChanged(value, this.m_styleData.padding.bottom)) return;
 
-        this.m_styleData.padding.bottom = value;
+        this.m_styleData.padding.bottom = Object.assign({}, value);
         if (value.unit === SizeUnit.percent) {
             Yoga.YGNodeStyleSetPaddingPercent(this.m_yogaNode, Yoga.YGEdge.YGEdgeBottom, value.value);
         } else {
@@ -1112,25 +1095,6 @@ export class Style {
                 else percentOf = calculatedHeight;
 
                 return size.value * 0.01 * percentOf;
-            case SizeUnit.em:
-                return size.value * this.resolveFontSize(this.m_styleData.fontSize);
-            case SizeUnit.rem:
-                if (!this.m_root) return size.value * DEFAULT_FONT_SIZE;
-                return size.value * this.m_root.resolveFontSize(this.m_root.m_styleData.fontSize);
-            case SizeUnit.vw:
-                return size.value * 0.01 * this.m_window.getSize().x;
-            case SizeUnit.vh:
-                return size.value * 0.01 * this.m_window.getSize().y;
-        }
-    }
-
-    /** @internal */
-    resolveBorderWidth(size: Size): number {
-        switch (size.unit) {
-            case SizeUnit.px:
-                return size.value;
-            case SizeUnit.percent:
-                return 0;
             case SizeUnit.em:
                 return size.value * this.resolveFontSize(this.m_styleData.fontSize);
             case SizeUnit.rem:
@@ -1419,25 +1383,25 @@ export class Style {
         Yoga.YGNodeStyleSetBorder(
             this.m_yogaNode,
             Yoga.YGEdge.YGEdgeTop,
-            this.resolveSize(this.m_styleData.border.width, Direction.Vertical)
+            this.resolveSize(this.m_styleData.border.top.width, Direction.Vertical)
         );
 
         Yoga.YGNodeStyleSetBorder(
             this.m_yogaNode,
             Yoga.YGEdge.YGEdgeRight,
-            this.resolveSize(this.m_styleData.border.width, Direction.Horizontal)
+            this.resolveSize(this.m_styleData.border.right.width, Direction.Horizontal)
         );
 
         Yoga.YGNodeStyleSetBorder(
             this.m_yogaNode,
             Yoga.YGEdge.YGEdgeBottom,
-            this.resolveSize(this.m_styleData.border.width, Direction.Vertical)
+            this.resolveSize(this.m_styleData.border.bottom.width, Direction.Vertical)
         );
 
         Yoga.YGNodeStyleSetBorder(
             this.m_yogaNode,
             Yoga.YGEdge.YGEdgeLeft,
-            this.resolveSize(this.m_styleData.border.width, Direction.Horizontal)
+            this.resolveSize(this.m_styleData.border.left.width, Direction.Horizontal)
         );
     }
 

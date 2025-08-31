@@ -8,7 +8,6 @@ export class TextDraw {
     private m_drawCall: DrawCall;
     private m_fontAtlas: FontAtlas;
     private m_fontName: string;
-    private m_cursorPos: vec2;
     private m_glyphs: Map<u32, FontGlyph>;
     private m_kerning: Map<u32, Map<u32, f32>>;
 
@@ -16,7 +15,6 @@ export class TextDraw {
         this.m_drawCall = drawCall;
         this.m_fontAtlas = fontAtlas;
         this.m_fontName = fontName;
-        this.m_cursorPos = new vec2(0, 0);
         this.m_glyphs = new Map<u32, FontGlyph>();
         this.m_kerning = new Map<u32, Map<u32, f32>>();
 
@@ -58,13 +56,7 @@ export class TextDraw {
         this.m_drawCall.resetUsedVertices();
     }
 
-    drawText(x: f32, y: f32, geometry: TextGeometry, clipRectIndex: u32) {
-        this.m_cursorPos.x = x;
-        this.m_cursorPos.y = y;
-
-        for (const vertex of geometry.vertices) {
-            const pos = new vec4(vertex.position.x + x, vertex.position.y + y, vertex.position.z, vertex.position.w);
-            this.m_drawCall.addVertex(new Vertex(pos, vertex.color, vertex.uv, clipRectIndex));
-        }
+    drawText(geometry: TextGeometry) {
+        this.m_drawCall.addVertices(geometry.vertices);
     }
 }

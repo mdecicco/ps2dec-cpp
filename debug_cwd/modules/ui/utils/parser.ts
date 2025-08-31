@@ -466,9 +466,10 @@ export class StyleParser {
         const color = this.parseColor();
         if (!color) return;
 
-        current.width = width;
-        current.style = style;
-        current.color = color;
+        current.top = { width, style, color };
+        current.right = { width, style, color };
+        current.bottom = { width, style, color };
+        current.left = { width, style, color };
     }
 
     parsePadding(current: Padding) {
@@ -552,9 +553,26 @@ export class StyleParser {
             if (parsedProps.border) return parsedProps.border;
 
             parsedProps.border = {
-                width: { value: 0, unit: SizeUnit.px },
-                style: BorderStyle.None,
-                color: { r: 0, g: 0, b: 0, a: 1 },
+                top: {
+                    width: { value: 0, unit: SizeUnit.px },
+                    style: BorderStyle.None,
+                    color: { r: 0, g: 0, b: 0, a: 1 }
+                },
+                right: {
+                    width: { value: 0, unit: SizeUnit.px },
+                    style: BorderStyle.None,
+                    color: { r: 0, g: 0, b: 0, a: 1 }
+                },
+                bottom: {
+                    width: { value: 0, unit: SizeUnit.px },
+                    style: BorderStyle.None,
+                    color: { r: 0, g: 0, b: 0, a: 1 }
+                },
+                left: {
+                    width: { value: 0, unit: SizeUnit.px },
+                    style: BorderStyle.None,
+                    color: { r: 0, g: 0, b: 0, a: 1 }
+                },
                 topLeftRadius: { value: 0, unit: SizeUnit.px },
                 topRightRadius: { value: 0, unit: SizeUnit.px },
                 bottomLeftRadius: { value: 0, unit: SizeUnit.px },
@@ -954,7 +972,10 @@ export class StyleParser {
                     if (!size) break;
 
                     const border = ensureBorder();
-                    border.width = size;
+                    border.top.width = size;
+                    border.right.width = size;
+                    border.bottom.width = size;
+                    border.left.width = size;
                     break;
                 }
                 case 'borderColor': {
@@ -963,7 +984,10 @@ export class StyleParser {
                     if (!color) break;
 
                     const border = ensureBorder();
-                    border.color = color;
+                    border.top.color = color;
+                    border.right.color = color;
+                    border.bottom.color = color;
+                    border.left.color = color;
                     break;
                 }
                 case 'borderStyle': {
@@ -972,7 +996,118 @@ export class StyleParser {
                     if (!style) break;
 
                     const border = ensureBorder();
-                    border.style = style;
+                    border.top.style = style;
+                    border.right.style = style;
+                    border.bottom.style = style;
+                    border.left.style = style;
+                    break;
+                }
+                case 'borderTopWidth': {
+                    const parser = new StyleParser(props.borderTopWidth!);
+                    const size = parser.parseSize();
+                    if (!size) break;
+
+                    const border = ensureBorder();
+                    border.top.width = size;
+                    break;
+                }
+                case 'borderRightWidth': {
+                    const parser = new StyleParser(props.borderRightWidth!);
+                    const size = parser.parseSize();
+                    if (!size) break;
+
+                    const border = ensureBorder();
+                    border.right.width = size;
+                    break;
+                }
+                case 'borderBottomWidth': {
+                    const parser = new StyleParser(props.borderBottomWidth!);
+                    const size = parser.parseSize();
+                    if (!size) break;
+
+                    const border = ensureBorder();
+                    border.bottom.width = size;
+                    break;
+                }
+                case 'borderLeftWidth': {
+                    const parser = new StyleParser(props.borderLeftWidth!);
+                    const size = parser.parseSize();
+                    if (!size) break;
+
+                    const border = ensureBorder();
+                    border.left.width = size;
+                    break;
+                }
+                case 'borderTopColor': {
+                    const parser = new StyleParser(props.borderTopColor!);
+                    const color = parser.parseColor();
+                    if (!color) break;
+
+                    const border = ensureBorder();
+                    border.top.color = color;
+                    break;
+                }
+                case 'borderRightColor': {
+                    const parser = new StyleParser(props.borderRightColor!);
+                    const color = parser.parseColor();
+                    if (!color) break;
+
+                    const border = ensureBorder();
+                    border.right.color = color;
+                    break;
+                }
+                case 'borderBottomColor': {
+                    const parser = new StyleParser(props.borderBottomColor!);
+                    const color = parser.parseColor();
+                    if (!color) break;
+
+                    const border = ensureBorder();
+                    border.bottom.color = color;
+                    break;
+                }
+                case 'borderLeftColor': {
+                    const parser = new StyleParser(props.borderLeftColor!);
+                    const color = parser.parseColor();
+                    if (!color) break;
+
+                    const border = ensureBorder();
+                    border.left.color = color;
+                    break;
+                }
+                case 'borderTopStyle': {
+                    const parser = new StyleParser(props.borderTopStyle!);
+                    const style = parser.parseBorderStyle();
+                    if (!style) break;
+
+                    const border = ensureBorder();
+                    border.top.style = style;
+                    break;
+                }
+                case 'borderRightStyle': {
+                    const parser = new StyleParser(props.borderRightStyle!);
+                    const style = parser.parseBorderStyle();
+                    if (!style) break;
+
+                    const border = ensureBorder();
+                    border.right.style = style;
+                    break;
+                }
+                case 'borderBottomStyle': {
+                    const parser = new StyleParser(props.borderBottomStyle!);
+                    const style = parser.parseBorderStyle();
+                    if (!style) break;
+
+                    const border = ensureBorder();
+                    border.bottom.style = style;
+                    break;
+                }
+                case 'borderLeftStyle': {
+                    const parser = new StyleParser(props.borderLeftStyle!);
+                    const style = parser.parseBorderStyle();
+                    if (!style) break;
+
+                    const border = ensureBorder();
+                    border.left.style = style;
                     break;
                 }
                 case 'borderRadius': {

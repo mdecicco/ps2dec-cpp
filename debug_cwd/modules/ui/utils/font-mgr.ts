@@ -4,6 +4,7 @@ import { CommandPool, LogicalDevice } from 'render';
 import { Direction, GeometryType, TextGeometry, TextProperties, Vertex } from '../types';
 import { Style } from '../renderer/style';
 import { vec2, vec4 } from 'math-ext';
+import { VertexArray } from './vertex-array';
 
 export type FontFamilyOptions = {
     name: string;
@@ -13,6 +14,8 @@ export type FontFamilyOptions = {
     codepoints?: (u32 | string)[];
 };
 
+type GlyphInfo = {};
+
 export class FontFamily {
     private m_atlas: FontAtlas | null;
     private m_name: string;
@@ -21,6 +24,9 @@ export class FontFamily {
     private m_codepoints: u32[];
     private m_glyphs: Map<u32, FontGlyph>;
     private m_kerning: Map<u32, Map<u32, f32>>;
+    private m_ascender: f32;
+    private m_descender: f32;
+    private m_emSize: f32;
 
     constructor(options: FontFamilyOptions) {
         this.m_atlas = null;
@@ -32,6 +38,9 @@ export class FontFamily {
             : [];
         this.m_glyphs = new Map<u32, FontGlyph>();
         this.m_kerning = new Map<u32, Map<u32, f32>>();
+        this.m_ascender = 0.0;
+        this.m_descender = 0.0;
+        this.m_emSize = 0.0;
     }
 
     get isLoaded() {
@@ -71,6 +80,10 @@ export class FontFamily {
             this.m_atlas = loadFont(this.m_filePath, device, cmdPool)!;
         }
 
+        this.m_ascender = this.m_atlas.ascender;
+        this.m_descender = this.m_atlas.descender;
+        this.m_emSize = this.m_atlas.emSize;
+
         for (const glyph of this.m_atlas.glyphs) {
             this.m_glyphs.set(glyph.codepoint, glyph);
         }
@@ -103,18 +116,18 @@ export class FontFamily {
         geometry: TextGeometry,
         codepoint: u32,
         nextCodepoint: u32 | null,
-        properties: TextProperties
+        properties: TextProperties,
+        instanceIdx: u32
     ) {
         if (!this.m_atlas) return;
 
         const glyph = this.m_glyphs.get(codepoint);
         if (!glyph) return;
 
-        const wFrac = glyph.u1 - glyph.u0;
-        const hFrac = glyph.v1 - glyph.v0;
-        const fontHeight = this.m_atlas.ascender - this.m_atlas.descender;
+        const fontHeight = this.m_ascender - this.m_descender;
         const invFontScale = 1.0 / fontHeight;
-        let advance = glyph.advance * this.m_atlas.emSize * invFontScale * properties.fontSize;
+        const scale = invFontScale * properties.fontSize;
+        let advance = glyph.advance * this.m_emSize * scale;
 
         // dumb wrapping for now at the character level
         if (cursor.x + advance > properties.maxWidth) {
@@ -127,54 +140,46 @@ export class FontFamily {
             if (kerningMap) {
                 const kerning = kerningMap.get(nextCodepoint);
                 if (kerning) {
-                    advance += kerning * this.m_atlas.emSize * invFontScale * properties.fontSize;
+                    advance += kerning * this.m_emSize * scale;
                 }
             }
         }
 
-        if (wFrac === 0 || hFrac === 0) {
+        if (glyph.width === 0 || glyph.height === 0) {
             cursor.x += advance;
             return;
         }
 
-        let width = glyph.width * this.m_atlas.emSize;
-        let height = glyph.height * this.m_atlas.emSize;
-        let x = glyph.bearingX * this.m_atlas.emSize;
-        let y = -glyph.bearingY * this.m_atlas.emSize + this.m_atlas.ascender + this.m_atlas.descender;
+        let width = glyph.width * this.m_emSize;
+        let height = glyph.height * this.m_emSize;
+        let x = glyph.bearingX * this.m_emSize;
+        let y = -glyph.bearingY * this.m_emSize + this.m_ascender + this.m_descender;
 
-        width *= invFontScale * properties.fontSize;
-        height *= invFontScale * properties.fontSize;
-        x *= invFontScale * properties.fontSize;
-        y *= invFontScale * properties.fontSize;
+        width *= scale;
+        height *= scale;
+        x *= scale;
+        y *= scale;
 
         x += cursor.x;
         y += cursor.y;
 
-        const p0 = new vec4(x, y, 0.1, 0.0);
-        const p1 = new vec4(x + width, y, 0.1, 0.0);
-        const p2 = new vec4(x + width, y + height, 0.1, 0.0);
-        const p3 = new vec4(x, y + height, 0.1, 0.0);
-        const uv0 = new vec2(glyph.u0, glyph.v1);
-        const uv1 = new vec2(glyph.u1, glyph.v1);
-        const uv2 = new vec2(glyph.u1, glyph.v0);
-        const uv3 = new vec2(glyph.u0, glyph.v0);
+        const z = 0.1;
+        const { r, g, b, a } = properties.color;
 
         if (x + width > geometry.width) geometry.width = x + width;
         if (y + height > geometry.height) geometry.height = y + height;
 
-        const color = properties.color;
-
-        geometry.vertices.push(new Vertex(p0, new vec4(color.r, color.g, color.b, color.a), uv0));
-        geometry.vertices.push(new Vertex(p1, new vec4(color.r, color.g, color.b, color.a), uv1));
-        geometry.vertices.push(new Vertex(p2, new vec4(color.r, color.g, color.b, color.a), uv2));
-        geometry.vertices.push(new Vertex(p0, new vec4(color.r, color.g, color.b, color.a), uv0));
-        geometry.vertices.push(new Vertex(p2, new vec4(color.r, color.g, color.b, color.a), uv2));
-        geometry.vertices.push(new Vertex(p3, new vec4(color.r, color.g, color.b, color.a), uv3));
+        geometry.vertices.push(x, y, z, r, g, b, a, glyph.u0, glyph.v1, instanceIdx);
+        geometry.vertices.push(x + width, y, z, r, g, b, a, glyph.u1, glyph.v1, instanceIdx);
+        geometry.vertices.push(x + width, y + height, z, r, g, b, a, glyph.u1, glyph.v0, instanceIdx);
+        geometry.vertices.push(x, y, z, r, g, b, a, glyph.u0, glyph.v1, instanceIdx);
+        geometry.vertices.push(x + width, y + height, z, r, g, b, a, glyph.u1, glyph.v0, instanceIdx);
+        geometry.vertices.push(x, y + height, z, r, g, b, a, glyph.u0, glyph.v0, instanceIdx);
 
         cursor.x += advance;
     }
 
-    createGlyphGeometry(codepoint: u32, properties: TextProperties): TextGeometry {
+    createGlyphGeometry(codepoint: u32, properties: TextProperties, instanceIdx: u32): TextGeometry {
         const geometry: TextGeometry = {
             type: GeometryType.Text,
             text: String.fromCharCode(codepoint),
@@ -182,15 +187,17 @@ export class FontFamily {
             width: 0,
             height: 0,
             offsetPosition: new vec4(),
-            vertices: []
+            vertices: new VertexArray()
         };
 
-        this.renderSingleGlyph(new vec2(0, 0), geometry, codepoint, null, properties);
+        geometry.vertices.init(6);
+
+        this.renderSingleGlyph(new vec2(0, 0), geometry, codepoint, null, properties, instanceIdx);
 
         return geometry;
     }
 
-    createTextGeometry(text: string, properties: TextProperties): TextGeometry {
+    createTextGeometry(text: string, properties: TextProperties, instanceIdx: u32): TextGeometry {
         const geometry: TextGeometry = {
             type: GeometryType.Text,
             text,
@@ -198,15 +205,17 @@ export class FontFamily {
             width: 0,
             height: 0,
             offsetPosition: new vec4(),
-            vertices: []
+            vertices: new VertexArray()
         };
+
+        geometry.vertices.init(6 * text.length);
 
         const cursor = new vec2(0, 0);
 
         for (let i = 0; i < text.length; i++) {
             const codepoint = text.charCodeAt(i);
             const nextCodepoint = i < text.length - 1 ? text.charCodeAt(i + 1) : null;
-            this.renderSingleGlyph(cursor, geometry, codepoint, nextCodepoint, properties);
+            this.renderSingleGlyph(cursor, geometry, codepoint, nextCodepoint, properties, instanceIdx);
         }
 
         return geometry;

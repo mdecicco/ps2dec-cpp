@@ -7,16 +7,24 @@ import { vec2, vec4 } from 'math-ext';
 import { isChanged } from 'is-changed';
 
 import { KeyboardEvent, MouseEvent, ResizeEvent, ScrollEvent, UIEvent, WheelEvent } from '../types/events';
-import { ParsedStyleProps, TextOverflow, WhiteSpace } from '../types/style';
+import { ParsedStyleAttributes, WhiteSpace } from '../types/style';
 import { TextNode } from '../types/text-node';
 import { UINode } from '../types/ui-node';
 import { BoxNode } from '../types/box-node';
 import { GeometryNode } from '../types/geometry-node';
 import type { BoxProps, GeometryProps } from '../types/elements';
-import { Geometry, TextGeometry, CustomGeometry, BoxGeometry, BoxProperties, GeometryType } from '../types/geometry';
+import {
+    Geometry,
+    TextGeometry,
+    CustomGeometry,
+    BoxGeometry,
+    BoxProperties,
+    GeometryType,
+    Direction
+} from '../types/geometry';
 
 import { Style } from './style';
-import { getCompleteStyle, FontManager } from '../utils';
+import { getCompleteStyle, FontManager, VertexArray } from '../utils';
 import { buildBoxGeometry } from '../utils/box-geometry';
 
 type ElementEvents = {
@@ -47,6 +55,7 @@ type RendererState = {
     horizontalScrollBarDragStart: vec2 | null;
     verticalScrollBarDragMultiplier: f32;
     horizontalScrollBarDragMultiplier: f32;
+    instanceIdx: u32;
 };
 
 export class Element extends EventProducer<ElementEvents> {
@@ -61,7 +70,7 @@ export class Element extends EventProducer<ElementEvents> {
     /** @internal */ private m_geometry: Geometry | null;
     /** @internal */ private m_scrollOffset: vec2;
     /** @internal */ private m_contentSize: vec2;
-    /** @internal */ private m_styleProps: ParsedStyleProps;
+    /** @internal */ private m_styleProps: ParsedStyleAttributes;
     /** @internal */ private m_style: Style;
     /** @internal */ private m_rendererState: RendererState;
 
@@ -86,10 +95,10 @@ export class Element extends EventProducer<ElementEvents> {
         this.m_geometry = null;
         this.m_scrollOffset = new vec2();
         this.m_contentSize = new vec2();
-        this.m_styleProps = source.style;
+        this.m_styleProps = getCompleteStyle(this.m_parent?.m_styleProps, source.style);
         this.m_style = new Style(
             this.m_yogaNode,
-            getCompleteStyle(this.m_parent?.m_styleProps, this.m_styleProps),
+            this.m_styleProps,
             this.m_parent ? this.m_parent.m_style : null,
             this.m_root ? this.m_root.m_style : null,
             this.m_window
@@ -103,7 +112,8 @@ export class Element extends EventProducer<ElementEvents> {
             verticalScrollBarDragStart: null,
             horizontalScrollBarDragStart: null,
             verticalScrollBarDragMultiplier: 1.0,
-            horizontalScrollBarDragMultiplier: 1.0
+            horizontalScrollBarDragMultiplier: 1.0,
+            instanceIdx: -1
         };
 
         Yoga.YGConfigSetUseWebDefaults(Yoga.YGConfigGetDefault(), true);
@@ -129,8 +139,25 @@ export class Element extends EventProducer<ElementEvents> {
                         offsetPosition: new vec4(),
                         width: geometryWidth,
                         height: geometryHeight,
-                        vertices: props.vertices
+                        vertices: new VertexArray()
                     };
+
+                    this.m_geometry.vertices.init(props.vertices.length);
+
+                    for (const vertex of props.vertices) {
+                        this.m_geometry.vertices.push(
+                            vertex.position.x,
+                            vertex.position.y,
+                            vertex.position.z ?? 0.0,
+                            vertex.color?.r ?? this.style.color.r,
+                            vertex.color?.g ?? this.style.color.g,
+                            vertex.color?.b ?? this.style.color.b,
+                            vertex.color?.a ?? this.style.color.a,
+                            vertex.uv?.u ?? 0.0,
+                            vertex.uv?.v ?? 0.0,
+                            this.rendererState.instanceIdx
+                        );
+                    }
                 }
 
                 let outWidth = geometryWidth;
@@ -200,11 +227,22 @@ export class Element extends EventProducer<ElementEvents> {
                     return new vec2f(0, 0);
                 }
 
-                this.m_geometry = fontFamily.createTextGeometry(this.m_source.text, textProperties);
+                const previousGeometry = this.m_geometry as TextGeometry | null;
+                if (!previousGeometry || isChanged(textProperties, previousGeometry.textProperties)) {
+                    const start = Date.now();
+                    this.m_geometry = fontFamily.createTextGeometry(
+                        this.m_source.text,
+                        textProperties,
+                        this.rendererState.instanceIdx
+                    );
+                    const end = Date.now();
+                }
+
+                const currentGeometry = this.m_geometry as TextGeometry;
 
                 return new vec2f(
-                    Math.min(maxWidth, this.m_geometry.width),
-                    Math.min(maxHeight, this.m_geometry.height)
+                    Math.min(maxWidth, currentGeometry.width),
+                    Math.min(maxHeight, currentGeometry.height)
                 );
             });
         }
@@ -445,13 +483,6 @@ export class Element extends EventProducer<ElementEvents> {
 
     /** @internal */
     static __internal_setChildren(parent: Element, children: Element[]) {
-        for (const child of parent.m_children) {
-            if (children.findIndex(c => c === child) === -1) {
-                // node was removed
-                Yoga.YGNodeFreeRecursive(child.m_yogaNode);
-            }
-        }
-
         parent.m_children = children;
         Yoga.YGNodeSetChildren(
             parent.m_yogaNode,
@@ -461,11 +492,10 @@ export class Element extends EventProducer<ElementEvents> {
 
     /** @internal */
     static __internal_updateElement(element: Element, newSource: UINode) {
-        const prevSource = element.m_source;
         element.m_source = newSource;
-        element.m_styleProps = newSource.style;
+        element.m_styleProps = getCompleteStyle(element.m_parent?.m_styleProps, newSource.style);
 
-        const s = getCompleteStyle(element.m_parent?.m_styleProps, element.m_source.style);
+        const s = element.m_styleProps;
         element.m_style.minHeight = s.minHeight;
         element.m_style.minWidth = s.minWidth;
         element.m_style.maxHeight = s.maxHeight;
@@ -501,9 +531,23 @@ export class Element extends EventProducer<ElementEvents> {
         element.m_style.textOverflow = s.textOverflow;
         element.m_style.color = s.color;
         element.m_style.backgroundColor = s.backgroundColor;
-        element.m_style.borderWidth = s.border.width;
-        element.m_style.borderColor = s.border.color;
-        element.m_style.borderStyle = s.border.style;
+        element.m_style.borderTopWidth = s.border.top.width;
+        element.m_style.borderRightWidth = s.border.right.width;
+        element.m_style.borderBottomWidth = s.border.bottom.width;
+        element.m_style.borderLeftWidth = s.border.left.width;
+        element.m_style.borderTopColor = s.border.top.color;
+        element.m_style.borderRightColor = s.border.right.color;
+        element.m_style.borderBottomColor = s.border.bottom.color;
+        element.m_style.borderLeftColor = s.border.left.color;
+        element.m_style.borderTopStyle = s.border.top.style;
+        element.m_style.borderRightStyle = s.border.right.style;
+        element.m_style.borderBottomStyle = s.border.bottom.style;
+        element.m_style.borderLeftStyle = s.border.left.style;
+        element.m_style.borderRadius = s.border.topLeftRadius;
+        element.m_style.borderTopLeftRadius = s.border.topLeftRadius;
+        element.m_style.borderTopRightRadius = s.border.topRightRadius;
+        element.m_style.borderBottomLeftRadius = s.border.bottomLeftRadius;
+        element.m_style.borderBottomRightRadius = s.border.bottomRightRadius;
         element.m_style.borderRadius = s.border.topLeftRadius;
         element.m_style.borderTopLeftRadius = s.border.topLeftRadius;
         element.m_style.borderTopRightRadius = s.border.topRightRadius;
@@ -539,8 +583,25 @@ export class Element extends EventProducer<ElementEvents> {
                     offsetPosition: new vec4(),
                     width,
                     height,
-                    vertices: props.vertices
+                    vertices: new VertexArray()
                 };
+
+                element.m_geometry.vertices.init(props.vertices.length);
+
+                for (const vertex of props.vertices) {
+                    element.m_geometry.vertices.push(
+                        vertex.position.x,
+                        vertex.position.y,
+                        vertex.position.z ?? 0.0,
+                        vertex.color?.r ?? element.style.color.r,
+                        vertex.color?.g ?? element.style.color.g,
+                        vertex.color?.b ?? element.style.color.b,
+                        vertex.color?.a ?? element.style.color.a,
+                        vertex.uv?.u ?? 0.0,
+                        vertex.uv?.v ?? 0.0,
+                        element.rendererState.instanceIdx
+                    );
+                }
 
                 Yoga.YGNodeMarkDirty(element.m_yogaNode);
             }
@@ -610,9 +671,26 @@ export class Element extends EventProducer<ElementEvents> {
         if (element.m_source instanceof BoxNode) {
             const boxProps: BoxProperties = {
                 rect: element.m_style.clientRect,
-                borderWidth: element.m_style.resolveBorderWidth(element.m_style.borderWidth),
-                borderColor: element.m_style.borderColor,
-                borderStyle: element.m_style.borderStyle,
+                borderTop: {
+                    width: element.m_style.resolveSize(element.m_style.borderTopWidth, Direction.Vertical),
+                    color: element.m_style.borderTopColor,
+                    style: element.m_style.borderTopStyle
+                },
+                borderRight: {
+                    width: element.m_style.resolveSize(element.m_style.borderRightWidth, Direction.Horizontal),
+                    color: element.m_style.borderRightColor,
+                    style: element.m_style.borderRightStyle
+                },
+                borderBottom: {
+                    width: element.m_style.resolveSize(element.m_style.borderBottomWidth, Direction.Vertical),
+                    color: element.m_style.borderBottomColor,
+                    style: element.m_style.borderBottomStyle
+                },
+                borderLeft: {
+                    width: element.m_style.resolveSize(element.m_style.borderLeftWidth, Direction.Horizontal),
+                    color: element.m_style.borderLeftColor,
+                    style: element.m_style.borderLeftStyle
+                },
                 overflow: element.m_style.overflow,
                 color: element.m_style.backgroundColor,
                 scrollX: element.m_scrollOffset.x,
@@ -627,12 +705,18 @@ export class Element extends EventProducer<ElementEvents> {
 
             const geometry = element.m_geometry as BoxGeometry | null;
             if (!geometry || isChanged(boxProps, geometry.properties)) {
-                element.m_geometry = buildBoxGeometry(boxProps);
+                element.m_geometry = buildBoxGeometry(boxProps, element.rendererState.instanceIdx);
             }
         }
 
         if (newWidth !== prevWidth || newHeight !== prevHeight) {
             element.dispatch('resize', new ResizeEvent(element, newWidth, newHeight, prevWidth, prevHeight));
         }
+    }
+
+    /** @internal */
+    static __internal_unmount(element: Element) {
+        Yoga.YGNodeSetMeasureFunc(element.m_yogaNode, null);
+        Yoga.YGNodeFree(element.m_yogaNode);
     }
 }

@@ -8,8 +8,3 @@ export * from './text-node';
 export * from './root-node';
 export * from './vertex';
 export * from './geometry';
-
-export enum Direction {
-    Horizontal = 0,
-    Vertical = 1
-}

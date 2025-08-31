@@ -23,8 +23,8 @@ import { FontFamily, FontManager } from '../utils/font-mgr';
 import { UIEventManager } from '../utils/event-mgr';
 
 function clipRectsIntersect(a: ClientRect, b: ClientRect): boolean {
-    if (b.x + b.width <= a.x || b.x >= a.x + a.width) return false;
-    if (b.y + b.height <= a.y || b.y >= a.y + a.height) return false;
+    if (b.x + b.width < a.x || b.x > a.x + a.width) return false;
+    if (b.y + b.height < a.y || b.y > a.y + a.height) return false;
 
     return true;
 }
@@ -33,9 +33,9 @@ export class UIRenderer {
     private m_window: Window;
     private m_fontMgr: FontManager;
     private m_eventMgr: UIEventManager;
+    private m_renderContext: RenderContext;
     private m_treeGenerator: TreeGenerator;
     private m_lastTree: Element | null;
-    private m_renderContext: RenderContext;
     private m_resizeListener: u32 | null;
     private m_boxDraw: DrawCall | null;
     private m_windowSize: { width: u32; height: u32 };
@@ -45,13 +45,15 @@ export class UIRenderer {
         this.m_window = window;
         this.m_fontMgr = fontMgr;
         this.m_eventMgr = new UIEventManager(window);
-        this.m_treeGenerator = new TreeGenerator(window, fontMgr);
-        this.m_lastTree = null;
         this.m_renderContext = new RenderContext(window);
+        this.m_treeGenerator = new TreeGenerator(window, fontMgr, this.m_renderContext.instances);
+        this.m_lastTree = null;
         this.m_resizeListener = null;
         this.m_boxDraw = null;
         this.m_textDraws = new Map<FontFamily, TextDraw>();
-        this.m_windowSize = { width: 0, height: 0 };
+
+        const windowSize = window.getSize();
+        this.m_windowSize = { width: windowSize.x, height: windowSize.y };
     }
 
     init() {
@@ -59,10 +61,11 @@ export class UIRenderer {
         this.m_resizeListener = this.m_window.onResize(this.onResize.bind(this));
         this.m_eventMgr.init();
 
-        this.m_boxDraw = this.m_renderContext.allocateDrawCall(8192);
+        this.m_boxDraw = this.m_renderContext.allocateDrawCall(32768);
 
         const { logicalDevice, frameManager } = this.m_renderContext.renderContext;
         this.m_fontMgr.init(logicalDevice, frameManager.getCommandPool());
+        this.updateMatrices();
     }
 
     shutdown() {
@@ -76,43 +79,54 @@ export class UIRenderer {
         this.m_renderContext.shutdown();
     }
 
+    private updateMatrices() {
+        const proj = mat4.identity();
+        Transform.ortho(proj, 0, this.m_windowSize.width, 0, this.m_windowSize.height, 0, 1);
+
+        if (this.m_boxDraw) {
+            this.m_boxDraw.uniforms.projection = proj.transposed;
+        }
+
+        for (const [fontFamily, textDraw] of this.m_textDraws.entries()) {
+            textDraw.drawCall.uniforms.projection = proj.transposed;
+        }
+    }
+
+    private getTextDraw(fontFamily: FontFamily) {
+        let textDraw = this.m_textDraws.get(fontFamily);
+        if (textDraw) return textDraw;
+
+        const proj = mat4.identity();
+        Transform.ortho(proj, 0, this.m_windowSize.width, 0, this.m_windowSize.height, 0, 1);
+
+        textDraw = this.m_renderContext.allocateTextDraw(65536, fontFamily);
+        this.m_textDraws.set(fontFamily, textDraw);
+        textDraw.drawCall.uniforms.projection = proj.transposed;
+        return textDraw;
+    }
+
     private onResize(width: u32, height: u32) {
         this.m_windowSize = { width, height };
 
         if (this.m_boxDraw) {
             this.m_renderContext.freeDrawCall(this.m_boxDraw);
-            this.m_boxDraw = this.m_renderContext.allocateDrawCall(8192);
-
-            const proj = mat4.identity();
-            Transform.ortho(proj, 0, this.m_windowSize.width, 0, this.m_windowSize.height, 0, 1);
-            this.m_boxDraw.uniforms.projection = proj.transposed;
+            this.m_boxDraw = this.m_renderContext.allocateDrawCall(32768);
         }
 
         for (const [fontFamily, textDraw] of this.m_textDraws.entries()) {
             this.m_renderContext.freeDrawCall(textDraw.drawCall);
-            const newTextDraw = this.m_renderContext.allocateTextDraw(8192, fontFamily);
+            const newTextDraw = this.m_renderContext.allocateTextDraw(65536, fontFamily);
             this.m_textDraws.set(fontFamily, newTextDraw);
-
-            const proj = mat4.identity();
-            Transform.ortho(proj, 0, this.m_windowSize.width, 0, this.m_windowSize.height, 0, 1);
-            newTextDraw.drawCall.uniforms.projection = proj.transposed;
         }
 
+        this.updateMatrices();
         this.doLayout();
     }
 
     private drawText(node: Element, geometry: TextGeometry, clipRectIndex: u32) {
         const fontFamily = this.m_fontMgr.findFontFamily(geometry.textProperties);
         if (fontFamily) {
-            let textDraw = this.m_textDraws.get(fontFamily);
-            if (!textDraw) {
-                textDraw = this.m_renderContext.allocateTextDraw(32768, fontFamily);
-                this.m_textDraws.set(fontFamily, textDraw);
-            }
-
-            const proj = mat4.identity();
-            Transform.ortho(proj, 0, this.m_windowSize.width, 0, this.m_windowSize.height, 0, 1);
-            textDraw.drawCall.uniforms.projection = proj.transposed;
+            const textDraw = this.getTextDraw(fontFamily);
 
             let offsetX = 0;
             let offsetY = 0;
@@ -124,7 +138,15 @@ export class UIRenderer {
             }
 
             const { x, y } = node.style.clientRect;
-            textDraw.drawText(x + offsetX, y + offsetY, geometry, clipRectIndex);
+
+            this.m_renderContext.instances.updateInstance(node, {
+                offsetX: x + offsetX,
+                offsetY: y + offsetY,
+                offsetZ: 0,
+                clipRectIndex: clipRectIndex
+            });
+
+            textDraw.drawText(geometry);
         }
     }
 
@@ -140,12 +162,14 @@ export class UIRenderer {
             offsetY = -offset.y;
         }
 
-        for (const vertex of vertices) {
-            const pos = new vec4(offsetX, offsetY, 0, 0);
-            vec4.add(pos, vertex.position, geometry.offsetPosition);
-            const vtx = new Vertex(pos, vertex.color, undefined, clipRectIndex);
-            this.m_boxDraw!.addVertex(vtx);
-        }
+        this.m_renderContext.instances.updateInstance(node, {
+            offsetX: geometry.offsetPosition.x + offsetX,
+            offsetY: geometry.offsetPosition.y + offsetY,
+            offsetZ: geometry.offsetPosition.z,
+            clipRectIndex: clipRectIndex
+        });
+
+        this.m_boxDraw!.addVertices(vertices);
     }
 
     private drawCustom(node: Element, geometry: CustomGeometry, clipRectIndex: u32) {
@@ -161,21 +185,14 @@ export class UIRenderer {
             offsetY = -offset.y;
         }
 
-        for (const vertex of vertices) {
-            const pos = new vec4();
-            pos.x = vertex.position.x + geometry.offsetPosition.x + x + offsetX;
-            pos.y = vertex.position.y + geometry.offsetPosition.y + y + offsetY;
-            pos.z = vertex.position.z ?? 0.0 + geometry.offsetPosition.z;
-            pos.w = geometry.offsetPosition.w;
+        this.m_renderContext.instances.updateInstance(node, {
+            offsetX: geometry.offsetPosition.x + x + offsetX,
+            offsetY: geometry.offsetPosition.y + y + offsetY,
+            offsetZ: geometry.offsetPosition.z,
+            clipRectIndex: clipRectIndex
+        });
 
-            const color = vertex.color
-                ? new vec4(vertex.color.r, vertex.color.g, vertex.color.b, vertex.color.a ?? 1.0)
-                : new vec4(node.style.color.r, node.style.color.g, node.style.color.b, node.style.color.a);
-
-            const uv = vertex.uv ? new vec2(vertex.uv.u, vertex.uv.v) : new vec2();
-            const vtx = new Vertex(pos, color, uv, clipRectIndex);
-            this.m_boxDraw!.addVertex(vtx);
-        }
+        this.m_boxDraw!.addVertices(vertices);
     }
 
     private drawNode(node: Element) {
@@ -212,14 +229,17 @@ export class UIRenderer {
 
     private doLayout() {
         if (!this.m_lastTree) return;
-
-        const layoutEngine = new LayoutEngine(this.m_window, this.m_lastTree);
-        layoutEngine.execute();
-
         if (!this.m_window.isOpen()) return;
         if (!this.m_renderContext.isInitialized) this.init();
         if (!this.m_boxDraw) return;
 
+        let start = Date.now();
+        const layoutEngine = new LayoutEngine(this.m_window, this.m_lastTree);
+        layoutEngine.execute();
+        let end = Date.now();
+        console.debug(`Layout time: ${end - start}ms`);
+
+        start = Date.now();
         if (this.m_renderContext.begin()) {
             this.m_renderContext.clipRects.reset();
             this.m_boxDraw.resetUsedVertices();
@@ -231,6 +251,8 @@ export class UIRenderer {
             this.m_renderContext.beginRenderPass();
             this.m_renderContext.endRenderPass();
             this.m_renderContext.end();
+            end = Date.now();
+            console.debug(`Render time: ${end - start}ms`);
         }
     }
 

@@ -2,20 +2,22 @@ import { Window } from 'window';
 import { UINode } from '../types/ui-node';
 import { Element } from './element';
 import { IElementRecursion } from './tree-recurse';
-import { FontManager } from '../utils';
+import { FontManager, InstanceManager } from '../utils';
 
 export class TreeGenerator extends IElementRecursion {
     private m_window: Window;
     private m_root: Element | null;
     private m_createdElements: Element[];
     private m_fontManager: FontManager;
+    private m_instanceManager: InstanceManager;
 
-    constructor(window: Window, fontManager: FontManager) {
+    constructor(window: Window, fontManager: FontManager, instanceManager: InstanceManager) {
         super();
         this.m_window = window;
         this.m_root = null;
         this.m_createdElements = [];
         this.m_fontManager = fontManager;
+        this.m_instanceManager = instanceManager;
     }
 
     private getOrCreateElement(src: UINode) {
@@ -70,6 +72,8 @@ export class TreeGenerator extends IElementRecursion {
 
     private handleCreatedElements() {
         for (const element of this.m_createdElements) {
+            this.m_instanceManager.allocateInstance(element);
+
             if (element.treeNode.props.ref) {
                 if (typeof element.treeNode.props.ref === 'function') {
                     try {
@@ -83,6 +87,11 @@ export class TreeGenerator extends IElementRecursion {
                     element.treeNode.props.ref.current = element;
                 }
             }
+
+            element.treeNode.addListener('unmount', () => {
+                this.m_instanceManager.freeInstance(element);
+                Element.__internal_unmount(element);
+            });
         }
     }
 
