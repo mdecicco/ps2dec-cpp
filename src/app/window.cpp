@@ -161,120 +161,126 @@ namespace decomp {
                     return DefWindowProc(win, uMsg, wParam, lParam);
                 }
 
-                switch (uMsg) {
-                    case WM_CLOSE: {
-                        self->setOpen(false);
-                        return 0;
-                    }
-                    case WM_DESTROY: {
-                        self->m_handle = nullptr;
-                        self->m_onClose.dispatch(self->onClose);
-                        break;
-                    }
-                    case WM_SETFOCUS: {
-                        self->m_isFocused = true;
-                        self->m_onFocus.dispatch(self->onFocus);
-                        return 0;
-                    }
-                    case WM_KILLFOCUS: {
-                        self->m_isFocused = false;
-                        self->m_onBlur.dispatch(self->onBlur);
-                        return 0;
-                    }
-                    case WM_SIZE:
-                    case WM_MOVE: {
-                        RECT rect;
-
-                        if (GetClientRect(win, &rect)) {
-                            i32 width  = rect.right - rect.left;
-                            i32 height = rect.bottom - rect.top;
-
-                            if (width != self->m_width || height != self->m_height) {
-                                self->m_width  = width;
-                                self->m_height = height;
-
-                                self->onWindowResize(self, width, height);
-                                self->m_onResize.dispatch(self->onResize, width, height);
-                            }
+                try {
+                    switch (uMsg) {
+                        case WM_CLOSE: {
+                            self->setOpen(false);
+                            return 0;
                         }
-
-                        if (GetWindowRect(win, &rect)) {
-                            i32 posX = rect.left;
-                            i32 posY = rect.top;
-
-                            if (posX != self->m_posX || posY != self->m_posY) {
-                                self->m_posX = posX;
-                                self->m_posY = posY;
-
-                                self->m_onMove.dispatch(self->onMove, posX, posY);
-                            }
-                        }
-                        break;
-                    }
-                    case WM_KEYDOWN: {
-                        KeyboardKey code = KeyboardKey(HIWORD(lParam) & (KF_EXTENDED | 0xff));
-                        if (code == KeyboardKey::None) {
-                            code = KeyboardKey(MapVirtualKeyW(u32(wParam), MAPVK_VK_TO_VSC));
-                        }
-
-                        if (!Window_Impl::isKeyCodeValid(u32(code))) {
+                        case WM_DESTROY: {
+                            self->m_handle = nullptr;
+                            self->m_onClose.dispatch(self->onClose);
                             break;
                         }
-
-                        self->m_onKeyDown.dispatch(self->onKeyDown, code);
-                        break;
-                    }
-                    case WM_KEYUP: {
-                        KeyboardKey code = KeyboardKey(HIWORD(lParam) & (KF_EXTENDED | 0xff));
-                        if (code == KeyboardKey::None) {
-                            code = KeyboardKey(MapVirtualKeyW(u32(wParam), MAPVK_VK_TO_VSC));
+                        case WM_SETFOCUS: {
+                            self->m_isFocused = true;
+                            self->m_onFocus.dispatch(self->onFocus);
+                            return 0;
                         }
-                        if (!Window_Impl::isKeyCodeValid(u32(code))) {
+                        case WM_KILLFOCUS: {
+                            self->m_isFocused = false;
+                            self->m_onBlur.dispatch(self->onBlur);
+                            return 0;
+                        }
+                        case WM_SIZE:
+                        case WM_MOVE: {
+                            RECT rect;
+
+                            if (GetClientRect(win, &rect)) {
+                                i32 width  = rect.right - rect.left;
+                                i32 height = rect.bottom - rect.top;
+
+                                if (width != self->m_width || height != self->m_height) {
+                                    self->m_width  = width;
+                                    self->m_height = height;
+
+                                    self->onWindowResize(self, width, height);
+                                    self->m_onResize.dispatch(self->onResize, width, height);
+                                }
+                            }
+
+                            if (GetWindowRect(win, &rect)) {
+                                i32 posX = rect.left;
+                                i32 posY = rect.top;
+
+                                if (posX != self->m_posX || posY != self->m_posY) {
+                                    self->m_posX = posX;
+                                    self->m_posY = posY;
+
+                                    self->m_onMove.dispatch(self->onMove, posX, posY);
+                                }
+                            }
                             break;
                         }
+                        case WM_KEYDOWN: {
+                            KeyboardKey code = KeyboardKey(HIWORD(lParam) & (KF_EXTENDED | 0xff));
+                            if (code == KeyboardKey::None) {
+                                code = KeyboardKey(MapVirtualKeyW(u32(wParam), MAPVK_VK_TO_VSC));
+                            }
 
-                        self->m_onKeyUp.dispatch(self->onKeyUp, code);
+                            if (!Window_Impl::isKeyCodeValid(u32(code))) {
+                                break;
+                            }
 
-                        break;
-                    }
-                    case WM_MOUSEMOVE: {
-                        i32 x = GET_X_LPARAM(lParam);
-                        i32 y = GET_Y_LPARAM(lParam);
+                            self->m_onKeyDown.dispatch(self->onKeyDown, code);
+                            break;
+                        }
+                        case WM_KEYUP: {
+                            KeyboardKey code = KeyboardKey(HIWORD(lParam) & (KF_EXTENDED | 0xff));
+                            if (code == KeyboardKey::None) {
+                                code = KeyboardKey(MapVirtualKeyW(u32(wParam), MAPVK_VK_TO_VSC));
+                            }
+                            if (!Window_Impl::isKeyCodeValid(u32(code))) {
+                                break;
+                            }
 
-                        self->m_onMouseMove.dispatch(self->onMouseMove, x, y);
-                        break;
-                    }
-                    case WM_MOUSEWHEEL: {
-                        i16 x = HIWORD(wParam);
-                        f32 d = x / f32(WHEEL_DELTA);
+                            self->m_onKeyUp.dispatch(self->onKeyUp, code);
 
-                        self->m_onScroll.dispatch(self->onScroll, d);
-                        break;
+                            break;
+                        }
+                        case WM_MOUSEMOVE: {
+                            i32 x = GET_X_LPARAM(lParam);
+                            i32 y = GET_Y_LPARAM(lParam);
+
+                            self->m_onMouseMove.dispatch(self->onMouseMove, x, y);
+                            break;
+                        }
+                        case WM_MOUSEWHEEL: {
+                            i16 x = HIWORD(wParam);
+                            f32 d = x / f32(WHEEL_DELTA);
+
+                            self->m_onScroll.dispatch(self->onScroll, d);
+                            break;
+                        }
+                        case WM_LBUTTONDOWN: {
+                            self->m_onMouseDown.dispatch(self->onMouseDown, MouseButton::Left);
+                            break;
+                        }
+                        case WM_LBUTTONUP: {
+                            self->m_onMouseUp.dispatch(self->onMouseUp, MouseButton::Left);
+                            break;
+                        }
+                        case WM_MBUTTONDOWN: {
+                            self->m_onMouseDown.dispatch(self->onMouseDown, MouseButton::Middle);
+                            break;
+                        }
+                        case WM_MBUTTONUP: {
+                            self->m_onMouseUp.dispatch(self->onMouseUp, MouseButton::Middle);
+                            break;
+                        }
+                        case WM_RBUTTONDOWN: {
+                            self->m_onMouseDown.dispatch(self->onMouseDown, MouseButton::Right);
+                            break;
+                        }
+                        case WM_RBUTTONUP: {
+                            self->m_onMouseUp.dispatch(self->onMouseUp, MouseButton::Right);
+                            break;
+                        }
                     }
-                    case WM_LBUTTONDOWN: {
-                        self->m_onMouseDown.dispatch(self->onMouseDown, MouseButton::Left);
-                        break;
-                    }
-                    case WM_LBUTTONUP: {
-                        self->m_onMouseUp.dispatch(self->onMouseUp, MouseButton::Left);
-                        break;
-                    }
-                    case WM_MBUTTONDOWN: {
-                        self->m_onMouseDown.dispatch(self->onMouseDown, MouseButton::Middle);
-                        break;
-                    }
-                    case WM_MBUTTONUP: {
-                        self->m_onMouseUp.dispatch(self->onMouseUp, MouseButton::Middle);
-                        break;
-                    }
-                    case WM_RBUTTONDOWN: {
-                        self->m_onMouseDown.dispatch(self->onMouseDown, MouseButton::Right);
-                        break;
-                    }
-                    case WM_RBUTTONUP: {
-                        self->m_onMouseUp.dispatch(self->onMouseUp, MouseButton::Right);
-                        break;
-                    }
+                } catch (const GenericException& e) {
+                    self->error(e.what());
+                } catch (const std::exception& e) {
+                    self->error(e.what());
                 }
 
                 return DefWindowProc(win, uMsg, wParam, lParam);
