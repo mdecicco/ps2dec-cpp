@@ -16,18 +16,7 @@ namespace decomp {
 
     template <typename CallbackReturn, typename... CallbackArgs>
     Event<CallbackReturn, CallbackArgs...>::~Event() {
-        Listener* listener = m_listeners;
-        while (listener) {
-            if (listener->isTsppCallback) {
-                tspp::Callback::Release(listener->callback);
-            }
-            Listener* next = listener->next;
-            delete listener;
-            listener = next;
-        }
-
-        m_listeners    = nullptr;
-        m_lastListener = nullptr;
+        clear();
     }
 
     template <typename CallbackReturn, typename... CallbackArgs>
@@ -94,28 +83,67 @@ namespace decomp {
 
     template <typename CallbackReturn, typename... CallbackArgs>
     void Event<CallbackReturn, CallbackArgs...>::dispatch(CallbackArgs... args) {
-        Listener* listener = m_listeners;
-        while (listener) {
-            Listener* next = listener->next;
-            Listener* prev = listener->prev;
+        struct CachedListener {
+            public:
+                EventListenerId id;
+                Listener* listener;
+        };
 
-            listener->callback(std::forward<CallbackArgs>(args)...);
-            bool didRemoveSelf = false;
-            if (prev) {
-                didRemoveSelf = prev->next != listener;
-            } else if (next) {
-                didRemoveSelf = next->prev != listener;
-            } else {
-                didRemoveSelf = m_listeners != listener;
-            }
+        u32 count   = 0;
+        Listener* l = m_listeners;
+        while (l) {
+            count++;
+            l = l->next;
+        }
 
-            if (!didRemoveSelf) {
-                if (listener->justOnce) {
-                    removeListener(listener);
+        Array<CachedListener> cache(count);
+
+        l = m_listeners;
+        while (l) {
+            cache.push({l->id, l});
+            l = l->next;
+        }
+
+        for (u32 i = 0; i < cache.size(); i++) {
+            CachedListener& c = cache[i];
+
+            if (i > 0) {
+                bool isRemoved = true;
+                l              = m_listeners;
+                while (l) {
+                    if (l->id == c.id) {
+                        isRemoved = false;
+                        break;
+                    }
+                    l = l->next;
+                }
+
+                if (isRemoved) {
+                    continue;
                 }
             }
 
-            listener = next;
+            bool removeAfterCall = c.listener->justOnce;
+
+            c.listener->callback(std::forward<CallbackArgs>(args)...);
+
+            if (removeAfterCall) {
+                bool isRemoved = true;
+                l              = m_listeners;
+                while (l) {
+                    if (l->id == c.id) {
+                        isRemoved = false;
+                        break;
+                    }
+                    l = l->next;
+                }
+
+                if (isRemoved) {
+                    continue;
+                }
+
+                removeListener(c.listener);
+            }
         }
     }
 
@@ -125,28 +153,67 @@ namespace decomp {
     {
         Array<CallbackReturn> results;
 
-        Listener* listener = m_listeners;
-        while (listener) {
-            Listener* next = listener->next;
-            Listener* prev = listener->prev;
-            results.push(listener->callback(std::forward<CallbackArgs>(args)...));
+        struct CachedListener {
+            public:
+                EventListenerId id;
+                Listener* listener;
+        };
 
-            bool didRemoveSelf = false;
-            if (prev) {
-                didRemoveSelf = prev->next != listener;
-            } else if (next) {
-                didRemoveSelf = next->prev != listener;
-            } else {
-                didRemoveSelf = m_listeners != listener;
-            }
+        u32 count   = 0;
+        Listener* l = m_listeners;
+        while (l) {
+            count++;
+            l = l->next;
+        }
 
-            if (!didRemoveSelf) {
-                if (listener->justOnce) {
-                    removeListener(listener);
+        Array<CachedListener> cache(count);
+
+        l = m_listeners;
+        while (l) {
+            cache.push({l->id, l});
+            l = l->next;
+        }
+
+        for (u32 i = 0; i < cache.size(); i++) {
+            CachedListener& c = cache[i];
+
+            if (i > 0) {
+                bool isRemoved = true;
+                l              = m_listeners;
+                while (l) {
+                    if (l->id == c.id) {
+                        isRemoved = false;
+                        break;
+                    }
+                    l = l->next;
+                }
+
+                if (isRemoved) {
+                    continue;
                 }
             }
 
-            listener = next;
+            bool removeAfterCall = c.listener->justOnce;
+
+            results.push(c.listener->callback(std::forward<CallbackArgs>(args)...));
+
+            if (removeAfterCall) {
+                bool isRemoved = true;
+                l              = m_listeners;
+                while (l) {
+                    if (l->id == c.id) {
+                        isRemoved = false;
+                        break;
+                    }
+                    l = l->next;
+                }
+
+                if (isRemoved) {
+                    continue;
+                }
+
+                removeListener(c.listener);
+            }
         }
 
         return results;
@@ -175,6 +242,22 @@ namespace decomp {
         }
 
         delete listener;
+    }
+
+    template <typename CallbackReturn, typename... CallbackArgs>
+    void Event<CallbackReturn, CallbackArgs...>::clear() {
+        Listener* listener = m_listeners;
+        while (listener) {
+            if (listener->isTsppCallback) {
+                tspp::Callback::Release(listener->callback);
+            }
+            Listener* next = listener->next;
+            delete listener;
+            listener = next;
+        }
+
+        m_listeners    = nullptr;
+        m_lastListener = nullptr;
     }
 
     template <typename CallbackReturn, typename... CallbackArgs>

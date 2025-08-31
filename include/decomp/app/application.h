@@ -41,6 +41,7 @@ namespace decomp {
             Event<void> onService;
 
             i32 run();
+            void requestShutdown();
 
         protected:
             using Clock    = std::chrono::steady_clock;

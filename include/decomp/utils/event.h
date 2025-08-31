@@ -19,6 +19,7 @@ namespace decomp {
             EventListenerId addListener(CallbackType callback, bool justOnce = false, bool isTsppCallback = false);
             void removeListener(EventListenerId id);
             CallbackType getListener(EventListenerId id);
+            void clear();
 
         protected:
             friend class EventDispatcher<CallbackReturn, CallbackArgs...>;
