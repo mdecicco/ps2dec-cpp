@@ -63,8 +63,9 @@ function getVerticalScrollBarHandleBox(
     const { x: boxX, y: boxY, width: boxWidth, height: boxHeight } = rect;
     const { scrollY, contentHeight } = geometry.properties;
 
+    const minScrollBarLength = 20;
     const maxScrollBarLength = boxHeight - scrollBarMargin * 2 - scrollBarWidth;
-    const scrollBarLength = (boxHeight / contentHeight) * maxScrollBarLength;
+    const scrollBarLength = Math.max(minScrollBarLength, (boxHeight / contentHeight) * maxScrollBarLength);
     const scrollBarPosition = (scrollY / (contentHeight - boxHeight)) * (maxScrollBarLength - scrollBarLength);
     const scrollOffsetPerHandlePixel = (contentHeight - boxHeight) / (maxScrollBarLength - scrollBarLength);
 
@@ -86,8 +87,9 @@ function getHorizontalScrollBarHandleBox(
     const { x: boxX, y: boxY, width: boxWidth, height: boxHeight } = rect;
     const { scrollX, contentWidth } = geometry.properties;
 
+    const minScrollBarLength = 20;
     const maxScrollBarLength = boxWidth - scrollBarMargin * 2 - scrollBarWidth;
-    const scrollBarLength = (boxWidth / contentWidth) * maxScrollBarLength;
+    const scrollBarLength = Math.max(minScrollBarLength, (boxWidth / contentWidth) * maxScrollBarLength);
     const scrollBarPosition = (scrollX / (contentWidth - boxWidth)) * (maxScrollBarLength - scrollBarLength);
     const scrollOffsetPerHandlePixel = (contentWidth - boxWidth) / (maxScrollBarLength - scrollBarLength);
 

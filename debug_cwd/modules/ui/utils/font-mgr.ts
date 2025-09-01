@@ -1,7 +1,17 @@
 import { FontAtlas, FontGlyph, loadFont, loadFontWithCharset } from 'msdf';
 import { CommandPool, LogicalDevice } from 'render';
 
-import { Direction, GeometryType, TextGeometry, TextProperties, Vertex } from '../types';
+import {
+    Direction,
+    GeometryType,
+    TextGeometry,
+    TextProperties,
+    WhiteSpace,
+    WordBreak,
+    WordWrap,
+    TextAlign,
+    TextOverflow
+} from '../types';
 import { Style } from '../renderer/style';
 import { vec2, vec4 } from 'math-ext';
 import { VertexArray } from './vertex-array';
@@ -12,6 +22,17 @@ export type FontFamilyOptions = {
     sdfFactorMin?: f32;
     sdfFactorMax?: f32;
     codepoints?: (u32 | string)[];
+};
+
+enum TokenType {
+    Word = 0,
+    Space = 1,
+    Newline = 2
+}
+
+type Token = {
+    type: TokenType;
+    text: string;
 };
 
 type GlyphRect = {
@@ -284,55 +305,429 @@ export class FontFamily {
 
         geometry.vertices.init(6 * text.length);
 
-        const cursor = new vec2(0, 0);
-        const words = text.split(' ');
+        const tokens = this.tokenize(text, properties.whiteSpace);
 
-        const spaceWidth = this.getGlyphRect(cursor, 32, null, false, properties)?.width ?? 0;
+        type Line = { glyphs: GlyphRect[]; width: number; cursorY: number };
+        const lines: Line[] = [];
+        let currentLine: Line = { glyphs: [], width: 0, cursorY: 0 };
 
-        let wordIdx = 0;
+        let cursor = new vec2(0, 0);
         let isLineStart = true;
-        while (wordIdx < words.length) {
-            const word = words[wordIdx];
+        let isFirstContent = true; // first non-space content in the whole text
 
-            if (!isLineStart) {
-                cursor.x += spaceWidth;
-                if (cursor.x > properties.maxWidth) {
-                    cursor.x = 0;
-                    cursor.y += properties.lineHeight;
-                    isLineStart = true;
-                    continue;
-                }
-            }
+        const wrappingAllowed = properties.whiteSpace !== WhiteSpace.Nowrap && properties.whiteSpace !== WhiteSpace.Pre;
+        const preservesSpaces =
+            properties.whiteSpace === WhiteSpace.Pre || properties.whiteSpace === WhiteSpace.PreWrap;
+        const allowBreakWithinWord =
+            wrappingAllowed &&
+            (properties.wordBreak === WordBreak.BreakAll ||
+                properties.wordBreak === WordBreak.BreakWord ||
+                properties.wordWrap === WordWrap.BreakWord);
 
-            const result = this.measureText(cursor, word, wordIdx === 0, properties);
+        const pushLine = () => {
+            lines.push(currentLine);
+            cursor.x = 0;
+            cursor.y += properties.lineHeight;
+            currentLine = { glyphs: [], width: 0, cursorY: cursor.y };
+            isLineStart = true;
+        };
 
-            if (result.cursorAfter.x > properties.maxWidth) {
-                cursor.x = 0;
-                cursor.y += properties.lineHeight;
-                isLineStart = true;
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
 
-                if (result.width > properties.maxWidth) {
-                    // text could not possibly fit
-                    break;
-                }
-
+            if (token.type === TokenType.Newline) {
+                pushLine();
                 continue;
             }
 
-            cursor.x = result.cursorAfter.x;
-            cursor.y = result.cursorAfter.y;
-            if (cursor.x > geometry.width) geometry.width = cursor.x;
-            if (cursor.y > geometry.height) geometry.height = cursor.y;
+            if (token.type === TokenType.Space) {
+                if (!preservesSpaces && isLineStart) continue;
 
-            for (const glyphRect of result.glyphRects) {
-                this.renderSingleGlyph(glyphRect, geometry, properties, instanceIdx);
+                const result = this.measureText(cursor, token.text, false, properties);
+
+                if (wrappingAllowed && result.cursorAfter.x > properties.maxWidth && !isLineStart) {
+                    pushLine();
+                    continue; // drop trailing space
+                }
+
+                // Accept advance; record a synthetic whitespace run to enable justify handling
+                if (result.width > 0) {
+                    const ws: GlyphRect = {
+                        x: cursor.x,
+                        y: cursor.y,
+                        width: result.width,
+                        height: 0,
+                        u0: 0,
+                        v0: 0,
+                        u1: 0,
+                        v1: 0,
+                        isWhitespace: true
+                    };
+                    currentLine.glyphs.push(ws);
+                }
+                cursor.x = result.cursorAfter.x;
+                cursor.y = result.cursorAfter.y;
+                currentLine.width = cursor.x;
+                isLineStart = false;
+                continue;
             }
 
-            wordIdx++;
+            // token.type === TokenType.Word
+            const result = this.measureText(cursor, token.text, isFirstContent, properties);
+
+            if (wrappingAllowed && result.cursorAfter.x > properties.maxWidth) {
+                if (!isLineStart) pushLine();
+
+                const retry = this.measureText(cursor, token.text, isFirstContent, properties);
+                if (retry.cursorAfter.x > properties.maxWidth) {
+                    if (allowBreakWithinWord) {
+                        let remaining = token.text;
+                        while (remaining.length > 0) {
+                            const widthLeft = Math.max(0, properties.maxWidth - cursor.x);
+                            const fit = this.fitPrefixByWidth(cursor, remaining, properties, widthLeft, isFirstContent);
+
+                            if (fit.count === 0) {
+                                if (!isLineStart) {
+                                    pushLine();
+                                    continue;
+                                } else {
+                                    const force = this.fitPrefixByWidth(
+                                        cursor,
+                                        remaining,
+                                        properties,
+                                        Number.MAX_SAFE_INTEGER,
+                                        isFirstContent,
+                                        1
+                                    );
+                                    for (const glyphRect of force.glyphs) currentLine.glyphs.push(glyphRect);
+                                    cursor.x += force.width;
+                                    currentLine.width = cursor.x;
+                                    remaining = remaining.slice(force.count);
+                                    isLineStart = false;
+                                    isFirstContent = false;
+                                    continue;
+                                }
+                            }
+
+                            for (const glyphRect of fit.glyphs) currentLine.glyphs.push(glyphRect);
+                            cursor.x += fit.width;
+                            currentLine.width = cursor.x;
+                            remaining = remaining.slice(fit.count);
+                            isLineStart = false;
+                            isFirstContent = false;
+
+                            if (remaining.length > 0) pushLine();
+                        }
+                        continue;
+                    } else {
+                        // No breaking within words; place on this line beyond maxWidth
+                        for (const glyphRect of retry.glyphRects) currentLine.glyphs.push(glyphRect);
+                        cursor.x = retry.cursorAfter.x;
+                        cursor.y = retry.cursorAfter.y;
+                        currentLine.width = cursor.x;
+                        isLineStart = false;
+                        isFirstContent = false;
+                        continue;
+                    }
+                }
+
+                // Accept retry on new line
+                for (const glyphRect of retry.glyphRects) currentLine.glyphs.push(glyphRect);
+                cursor.x = retry.cursorAfter.x;
+                cursor.y = retry.cursorAfter.y;
+                currentLine.width = cursor.x;
+                isLineStart = false;
+                isFirstContent = false;
+                continue;
+            }
+
+            // Accept placement on this line
+            for (const glyphRect of result.glyphRects) currentLine.glyphs.push(glyphRect);
+            cursor.x = result.cursorAfter.x;
+            cursor.y = result.cursorAfter.y;
+            currentLine.width = cursor.x;
             isLineStart = false;
+            if (token.text.trim().length > 0) isFirstContent = false;
         }
 
+        // Push final line if any glyphs
+        if (currentLine.glyphs.length > 0 || lines.length === 0) lines.push(currentLine);
+
+        // Trim trailing whitespace in non-preserve modes so justify/alignment don't count it
+        if (properties.whiteSpace !== WhiteSpace.Pre && properties.whiteSpace !== WhiteSpace.PreWrap) {
+            for (let li = 0; li < lines.length; li++) {
+                const line = lines[li];
+                let idx = line.glyphs.length - 1;
+                while (idx >= 0 && line.glyphs[idx].isWhitespace) {
+                    line.glyphs.pop();
+                    idx--;
+                }
+                if (line.glyphs.length > 0) {
+                    const lastG = line.glyphs[line.glyphs.length - 1];
+                    line.width = lastG.x + lastG.width;
+                } else {
+                    line.width = 0;
+                }
+            }
+        }
+
+        // Determine visible lines based on maxHeight
+        let maxLines =
+            properties.maxHeight > 0
+                ? Math.max(
+                      1,
+                      Math.floor(
+                          properties.lineHeight > 0
+                              ? properties.maxHeight / properties.lineHeight
+                              : Number.MAX_SAFE_INTEGER
+                      )
+                  )
+                : Number.MAX_SAFE_INTEGER;
+        const visibleCount = Math.min(lines.length, maxLines);
+
+        // Apply textOverflow=ellipsis on the last visible line if needed (truncated by height or width overflow on last line)
+        if (properties.textOverflow === TextOverflow.Ellipsis && visibleCount > 0) {
+            const lastIdx = visibleCount - 1;
+            const last = lines[lastIdx];
+
+            // Measure ellipsis width (try '…', fallback to '...')
+            const ellipsisTry = this.measureText(new vec2(last.width, last.cursorY), '…', false, properties);
+            const useFallback = ellipsisTry.glyphRects.length === 0;
+            const ellipsisMeasure = useFallback
+                ? this.measureText(new vec2(last.width, last.cursorY), '...', false, properties)
+                : ellipsisTry;
+            const ellipsisWidth = ellipsisMeasure.width;
+
+            let needsEllipsis = lines.length > visibleCount || last.width > properties.maxWidth;
+            if (needsEllipsis && ellipsisWidth > 0) {
+                // Trim trailing whitespace glyphs
+                while (last.glyphs.length > 0 && last.glyphs[last.glyphs.length - 1].isWhitespace) last.glyphs.pop();
+
+                // Trim until ellipsis fits within maxWidth
+                while (last.glyphs.length > 0 && last.width + ellipsisWidth > properties.maxWidth) {
+                    const g = last.glyphs.pop()!;
+                    // Recompute width to the new last content glyph
+                    if (last.glyphs.length > 0) {
+                        const lastG = last.glyphs[last.glyphs.length - 1];
+                        last.width = lastG.x + lastG.width;
+                    } else {
+                        last.width = 0;
+                    }
+                }
+
+                // Append ellipsis glyphs at the end position
+                for (const g of ellipsisMeasure.glyphRects) last.glyphs.push(g);
+                last.width += ellipsisMeasure.width;
+
+                // Truncate lines by height
+                lines.length = visibleCount;
+            }
+        } else {
+            // If clip/unset, still truncate by height
+            if (lines.length > visibleCount) lines.length = visibleCount;
+        }
+
+        // Compute offsets and justify extras
+        const offsets: number[] = new Array(lines.length);
+        const gapExtra: number[] = new Array(lines.length).fill(0);
+        for (let li = 0; li < lines.length; li++) {
+            const line = lines[li];
+
+            if (properties.textAlign === TextAlign.Justify && li < lines.length - 1) {
+                const extra = Math.max(0, properties.maxWidth - line.width);
+                if (extra > 0) {
+                    // Count eligible gaps: groups of whitespace between non-whitespace on both sides
+                    let gaps = 0;
+                    let hasWordBefore = false;
+                    let inSpace = false;
+                    for (let gi = 0; gi < line.glyphs.length; gi++) {
+                        const g = line.glyphs[gi];
+                        if (g.isWhitespace) {
+                            if (hasWordBefore) inSpace = true;
+                        } else {
+                            if (inSpace) {
+                                gaps++;
+                                inSpace = false;
+                            }
+                            hasWordBefore = true;
+                        }
+                    }
+                    if (gaps > 0) gapExtra[li] = extra / gaps;
+                }
+                offsets[li] = 0; // justify starts at left edge
+            } else {
+                switch (properties.textAlign) {
+                    case TextAlign.Center:
+                        offsets[li] = Math.max(0, (properties.maxWidth - line.width) * 0.5);
+                        break;
+                    case TextAlign.Right:
+                        offsets[li] = Math.max(0, properties.maxWidth - line.width);
+                        break;
+                    default:
+                        offsets[li] = 0;
+                        break;
+                }
+            }
+            if (geometry.width < line.width + offsets[li]) geometry.width = line.width + offsets[li];
+        }
+
+        // Render with offsets and justify gap expansion
+        for (let li = 0; li < lines.length; li++) {
+            const line = lines[li];
+            const dxBase = offsets[li];
+            const perGap = gapExtra[li];
+            let added = 0;
+            let seenWord = false;
+            let inSpace = false;
+
+            for (let gi = 0; gi < line.glyphs.length; gi++) {
+                const g = line.glyphs[gi];
+                if (g.isWhitespace) {
+                    if (seenWord) inSpace = true;
+                    continue; // skip rendering whitespace
+                }
+                if (inSpace && perGap > 0) {
+                    added += perGap;
+                    inSpace = false;
+                }
+                const shifted: GlyphRect = {
+                    x: g.x + dxBase + added,
+                    y: g.y,
+                    width: g.width,
+                    height: g.height,
+                    u0: g.u0,
+                    v0: g.v0,
+                    u1: g.u1,
+                    v1: g.v1,
+                    isWhitespace: g.isWhitespace
+                };
+                this.renderSingleGlyph(shifted, geometry, properties, instanceIdx);
+                seenWord = true;
+            }
+        }
+
+        geometry.height = lines.length * properties.lineHeight;
         return geometry;
+    }
+
+    private tokenize(text: string, mode: WhiteSpace): Token[] {
+        // Build tokens according to CSS white-space rules (subset for step 1)
+        const tokens: Token[] = [];
+
+        if (mode === WhiteSpace.Pre) {
+            // Preserve all characters, break on \n, group spaces/tabs as space tokens
+            let i = 0;
+            while (i < text.length) {
+                const ch = text[i];
+                if (ch === '\n') {
+                    tokens.push({ type: TokenType.Newline, text: '\n' });
+                    i++;
+                } else if (ch === ' ' || ch === '\t') {
+                    let j = i + 1;
+                    while (j < text.length && (text[j] === ' ' || text[j] === '\t')) j++;
+                    tokens.push({ type: TokenType.Space, text: text.slice(i, j).replace(/\t/g, ' ') });
+                    i = j;
+                } else {
+                    let j = i + 1;
+                    while (j < text.length && text[j] !== ' ' && text[j] !== '\t' && text[j] !== '\n') j++;
+                    tokens.push({ type: TokenType.Word, text: text.slice(i, j) });
+                    i = j;
+                }
+            }
+            return tokens;
+        }
+
+        if (mode === WhiteSpace.PreWrap) {
+            // Preserve spaces and newlines; allow wrapping later
+            let i = 0;
+            while (i < text.length) {
+                const ch = text[i];
+                if (ch === '\n') {
+                    tokens.push({ type: TokenType.Newline, text: '\n' });
+                    i++;
+                } else if (ch === ' ' || ch === '\t') {
+                    let j = i + 1;
+                    while (j < text.length && (text[j] === ' ' || text[j] === '\t')) j++;
+                    tokens.push({ type: TokenType.Space, text: text.slice(i, j).replace(/\t/g, ' ') });
+                    i = j;
+                } else {
+                    let j = i + 1;
+                    while (j < text.length && text[j] !== ' ' && text[j] !== '\t' && text[j] !== '\n') j++;
+                    tokens.push({ type: TokenType.Word, text: text.slice(i, j) });
+                    i = j;
+                }
+            }
+            return tokens;
+        }
+
+        if (mode === WhiteSpace.PreLine) {
+            // Collapse spaces/tabs to single spaces, but preserve newlines as breaks
+            const lines = text.split('\n');
+            for (let li = 0; li < lines.length; li++) {
+                const line = lines[li].replace(/[\t ]+/g, ' ');
+                const parts = line.split(' ');
+                for (let pi = 0; pi < parts.length; pi++) {
+                    const part = parts[pi];
+                    if (part.length === 0) continue;
+                    if (pi > 0) tokens.push({ type: TokenType.Space, text: ' ' });
+                    tokens.push({ type: TokenType.Word, text: part });
+                }
+                if (li < lines.length - 1) tokens.push({ type: TokenType.Newline, text: '\n' });
+            }
+            return tokens;
+        }
+
+        // Normal and Nowrap: collapse all whitespace (including newlines) to single spaces
+        {
+            const collapsed = text.replace(/\s+/g, ' ').trim();
+            if (collapsed.length === 0) return tokens;
+            const parts = collapsed.split(' ');
+            for (let i = 0; i < parts.length; i++) {
+                if (i > 0) tokens.push({ type: TokenType.Space, text: ' ' });
+                tokens.push({ type: TokenType.Word, text: parts[i] });
+            }
+            return tokens;
+        }
+    }
+
+    private fitPrefixByWidth(
+        originCursor: vec2,
+        text: string,
+        properties: TextProperties,
+        maxAdvance: number,
+        isFirstInText: boolean,
+        forceMinChars: number | null = null
+    ): { count: number; width: number; glyphs: GlyphRect[] } {
+        // Iterate characters, using getGlyphRect to respect kerning, until exceeding maxAdvance
+        let accWidth = 0;
+        let glyphs: GlyphRect[] = [];
+        let count = 0;
+        let cursor = new vec2(originCursor.x, originCursor.y);
+
+        for (let i = 0; i < text.length; i++) {
+            const codepoint = text.charCodeAt(i);
+            const nextCodepoint = i < text.length - 1 ? text.charCodeAt(i + 1) : null;
+            const isFirst = isFirstInText && i === 0;
+            const glyphRect = this.getGlyphRect(cursor, codepoint, nextCodepoint, isFirst, properties);
+            if (!glyphRect) continue;
+            const advance = glyphRect.width;
+
+            if (maxAdvance >= 0 && accWidth + advance > maxAdvance) {
+                if (forceMinChars !== null && count < forceMinChars) {
+                    glyphs.push(glyphRect);
+                    accWidth += advance;
+                    count++;
+                }
+                break;
+            }
+
+            glyphs.push(glyphRect);
+            accWidth += advance;
+            count++;
+            cursor.x += advance;
+        }
+
+        return { count, width: accWidth, glyphs };
     }
 }
 

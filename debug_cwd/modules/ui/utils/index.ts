@@ -5,6 +5,7 @@ export * from './text-draw';
 export * from './font-mgr';
 export * from './vertex-array';
 export * from './instance-mgr';
+export * from './vulkan';
 
 import { Color, ParsedStyleAttributes, ParsedStyleProps, Size, SizeUnit, StyleAttributes, StyleProps } from '../types';
 import { StyleParser } from './parser';
@@ -84,6 +85,7 @@ const cascadingStyleProps = new Set<keyof ParsedStyleAttributes>([
     'fontWeight',
     'fontFamily',
     'fontStyle',
+    'textAlign',
     'textDecoration',
     'whiteSpace',
     'wordBreak',

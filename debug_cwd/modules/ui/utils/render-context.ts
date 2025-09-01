@@ -17,7 +17,7 @@ import {
     VkShaderStageFlags
 } from 'vulkan';
 
-import { defaultChoosePhysicalDevice } from 'components/vulkan/logic';
+import { defaultChoosePhysicalDevice } from './vulkan';
 import { DrawCall } from './draw-call';
 import { TextDraw } from './text-draw';
 import { ClipRectManager } from './clip-rect-mgr';

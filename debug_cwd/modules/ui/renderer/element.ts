@@ -7,7 +7,7 @@ import { vec2, vec4 } from 'math-ext';
 import { isChanged } from 'is-changed';
 
 import { KeyboardEvent, MouseEvent, ResizeEvent, ScrollEvent, UIEvent, WheelEvent } from '../types/events';
-import { ParsedStyleAttributes, WhiteSpace } from '../types/style';
+import { Overflow, ParsedStyleAttributes, WhiteSpace } from '../types/style';
 import { TextNode } from '../types/text-node';
 import { UINode } from '../types/ui-node';
 import { BoxNode } from '../types/box-node';
@@ -221,6 +221,11 @@ export class Element extends EventProducer<ElementEvents> {
                         break;
                 }
 
+                if (this.m_parent && this.m_parent.m_style.overflow === Overflow.Scroll) {
+                    maxWidth = Infinity;
+                    maxHeight = Infinity;
+                }
+
                 const textProperties = FontManager.extractTextProperties(this.m_style, maxWidth, maxHeight);
                 const fontFamily = this.m_fontManager.findFontFamily(textProperties);
                 if (!fontFamily) {
@@ -417,7 +422,7 @@ export class Element extends EventProducer<ElementEvents> {
                 props.onMouseWheel(e);
             }
 
-            if (e.defaultPrevented) return;
+            if (e.defaultPrevented || this.m_style.overflow !== Overflow.Scroll) return;
 
             if (this.m_contentSize.x > this.m_style.clientRect.width) {
                 this.scrollX = this.scrollX - e.delta.x * 3;

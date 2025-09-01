@@ -191,12 +191,17 @@ const Test2: React.FC = () => {
     return (
         <Box
             style={{
-                width: '100%',
-                height: '100%',
+                width: '90%',
+                height: '90%',
+                margin: '5%',
                 backgroundColor: 'rgb(92, 92, 92)',
                 color: 'rgb(0, 0, 0)',
-                overflow: 'scroll',
-                fontSize: `${fontSize}px`
+                fontSize: `${fontSize}px`,
+                wordBreak: 'break-word',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                lineHeight: '0.8em',
+                textAlign: 'justify'
             }}
         >
             Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem
