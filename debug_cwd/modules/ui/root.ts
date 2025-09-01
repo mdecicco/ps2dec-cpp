@@ -16,9 +16,9 @@ export { StyleProps, StyleAttributes, ParsedStyleProps, ParsedStyleAttributes } 
 export class UIRoot extends ReactRoot {
     /** @internal */ private m_root: UINode | null;
     /** @internal */ private m_nodeStack: UINode[];
-    /** @internal */ private m_window: Window;
     /** @internal */ private m_fontMgr: FontManager;
     /** @internal */ private m_renderer: UIRenderer;
+    /** @internal */ private m_isShutdown: boolean;
 
     /** @internal */
     constructor(window: Window) {
@@ -26,9 +26,9 @@ export class UIRoot extends ReactRoot {
 
         this.m_root = null;
         this.m_nodeStack = [];
-        this.m_window = window;
         this.m_fontMgr = new FontManager();
         this.m_renderer = new UIRenderer(window, this.m_fontMgr);
+        this.m_isShutdown = false;
     }
 
     /** @internal */
@@ -91,12 +91,24 @@ export class UIRoot extends ReactRoot {
 
     /** @internal */
     onAfterRender(rootNode: TreeNode) {
+        if (this.m_isShutdown) return;
         this.m_root = null;
         this.parseNode(rootNode);
         this.renderToWindow();
     }
 
+    /** @internal */
+    unmount() {
+        if (this.m_isShutdown) return;
+        this.m_root = null;
+        this.m_nodeStack = [];
+        this.m_fontMgr.shutdown();
+        this.m_renderer.shutdown();
+        this.m_isShutdown = true;
+    }
+
     addFontFamily(fontFamily: FontFamilyOptions, isDefault: boolean = false) {
+        if (this.m_isShutdown) return;
         this.m_fontMgr.addFontFamily(fontFamily, isDefault);
     }
 }

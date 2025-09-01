@@ -530,7 +530,7 @@ export class RenderContext {
 
         cb.beginRenderPass(graphicsPipeline, this.m_currentFrame.getFramebuffer());
         cb.bindPipeline(graphicsPipeline, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS);
-        this.m_currentFrame.setClearColorF(0, new vec4f(0.05, 0.05, 0.05, 1));
+        this.m_currentFrame.setClearColorF(0, new vec4f(0, 0, 0, 1));
         this.m_currentFrame.setClearDepthStencil(1, 1.0, 0);
         cb.setViewport(0, windowSize.height, windowSize.width, -windowSize.height, 0, 1);
         cb.setScissor(0, 0, windowSize.width, windowSize.height);

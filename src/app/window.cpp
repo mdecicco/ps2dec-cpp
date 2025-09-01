@@ -785,6 +785,7 @@ namespace decomp {
         }
 
         ShowWindow((HWND)m_handle, SW_SHOWNORMAL);
+        SetWindowText((HWND)m_handle, m_title.c_str());
 
         // Don't ask me why CreateWindowEx won't just create the window with the correct style from the
         // beginning...

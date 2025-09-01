@@ -16,7 +16,10 @@
         "typeRoots": ["./internal/lib"],
         "types": ["v8", "core", "builtins"],
         "skipLibCheck": true,
-        "skipDefaultLibCheck": true
+        "skipDefaultLibCheck": true,
+        "paths": {
+            "@app/*": ["../app/*"]
+        }
     },
     "include": ["**/*.ts", "**/*.tsx"]
 }

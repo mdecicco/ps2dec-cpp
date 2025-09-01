@@ -21,6 +21,8 @@ export interface FunctionComponent<P = {}> {
 export type FC<P = {}> = FunctionComponent<P>;
 export type ComponentType<P = {}> = FunctionComponent<P>;
 
+export type PropertiesOf<T extends ComponentType> = T extends ComponentType<infer U> ? U : never;
+
 export function isReactElement(element: ReactNode): element is ReactElement {
     if (!element) return false;
     return typeof element === 'object' && 'type' in element && 'props' in element;
