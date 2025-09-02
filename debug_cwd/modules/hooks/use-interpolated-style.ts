@@ -46,7 +46,11 @@ type useInterpolatedSizeReturn = [
     }
 ];
 
-export function useInterpolatedSize(size: string, duration: number, easingMode: EasingMode = EasingMode.Linear) {
+export function useInterpolatedSize(
+    size: string,
+    duration: number,
+    easingMode: EasingMode = EasingMode.Linear
+): useInterpolatedSizeReturn {
     const parsedSize = React.useMemo(() => {
         const parser = new StyleParser(size);
         const value = parser.parseSize();
