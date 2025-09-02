@@ -41,16 +41,16 @@ export const darkTheme: Theme = {
     ...baseTokens,
     colors: {
         // Primary colors
-        primary: 'rgb(127, 138, 158)',
-        secondary: 'rgb(50, 74, 95)',
-        accent: 'rgba(204, 201, 220)',
+        primary: 'rgb(158, 138, 127)',
+        secondary: 'rgb(95, 70, 50)',
+        accent: 'rgb(202, 115, 34)',
 
         // Neutral colors
-        background: 'rgba(12, 24, 33, 1)',
-        surface: 'rgba(20, 33, 49, 1)',
-        text: 'rgba(255, 255, 255, 1)',
-        textSecondary: 'rgb(197, 197, 197)',
-        border: 'rgba(127, 138, 158, 1)',
+        background: 'rgb(24, 18, 7)',
+        surface: 'rgb(27, 15, 6)',
+        text: 'rgb(214, 214, 214)',
+        textSecondary: 'rgb(145, 145, 145)',
+        border: 'rgb(70, 56, 41)',
 
         // State colors
         success: 'rgb(90, 187, 106)',
