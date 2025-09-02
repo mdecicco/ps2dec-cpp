@@ -173,7 +173,7 @@ export class RenderContext {
             this.m_surface,
             this.m_logicalDevice,
             this.m_swapChainSupport,
-            VkFormat.VK_FORMAT_B8G8R8A8_SRGB,
+            VkFormat.VK_FORMAT_B8G8R8A8_UNORM,
             VkColorSpaceKHR.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
             VkPresentModeKHR.VK_PRESENT_MODE_FIFO_KHR,
             3,
