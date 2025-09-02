@@ -11,6 +11,22 @@
 #include <utils/String.h>
 
 namespace decomp {
+    enum class CursorIcon {
+        Default,
+        Arrow,
+        Crosshair,
+        Hand,
+        IBeam,
+        SizeAll,
+        SizeNESW,
+        SizeNS,
+        SizeNWSE,
+        SizeWE,
+        UpArrow,
+        Wait,
+        Help
+    };
+
     struct MonitorInfo {
         public:
             bool isPrimary;
@@ -48,6 +64,7 @@ namespace decomp {
             ) override;
 
             bool setOpen(bool open);
+            bool setCursorIcon(CursorIcon icon);
             bool isOpen() const;
             bool focus();
             bool isFocused() const;
@@ -86,6 +103,20 @@ namespace decomp {
             Application* m_application;
 
             void* m_handle;
+            void* m_cursorArrow;
+            void* m_cursorCrosshair;
+            void* m_cursorHand;
+            void* m_cursorIBeam;
+            void* m_cursorSizeAll;
+            void* m_cursorSizeNESW;
+            void* m_cursorSizeNS;
+            void* m_cursorSizeNWSE;
+            void* m_cursorSizeWE;
+            void* m_cursorUpArrow;
+            void* m_cursorWait;
+            void* m_cursorHelp;
+            CursorIcon m_cursorIcon;
+
             EventDispatcher<void> m_onOpen;
             EventDispatcher<void> m_onClose;
             EventDispatcher<void> m_onFocus;

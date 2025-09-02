@@ -172,6 +172,27 @@ namespace decomp {
                             self->m_onClose.dispatch(self->onClose);
                             break;
                         }
+                        case WM_SETCURSOR: {
+                            if (LOWORD(lParam) == HTCLIENT) {
+                                switch (self->m_cursorIcon) {
+                                    case CursorIcon::Arrow: SetCursor((HCURSOR)self->m_cursorArrow); break;
+                                    case CursorIcon::Crosshair: SetCursor((HCURSOR)self->m_cursorCrosshair); break;
+                                    case CursorIcon::Hand: SetCursor((HCURSOR)self->m_cursorHand); break;
+                                    case CursorIcon::IBeam: SetCursor((HCURSOR)self->m_cursorIBeam); break;
+                                    case CursorIcon::SizeAll: SetCursor((HCURSOR)self->m_cursorSizeAll); break;
+                                    case CursorIcon::SizeNESW: SetCursor((HCURSOR)self->m_cursorSizeNESW); break;
+                                    case CursorIcon::SizeNS: SetCursor((HCURSOR)self->m_cursorSizeNS); break;
+                                    case CursorIcon::SizeNWSE: SetCursor((HCURSOR)self->m_cursorSizeNWSE); break;
+                                    case CursorIcon::SizeWE: SetCursor((HCURSOR)self->m_cursorSizeWE); break;
+                                    case CursorIcon::UpArrow: SetCursor((HCURSOR)self->m_cursorUpArrow); break;
+                                    case CursorIcon::Wait: SetCursor((HCURSOR)self->m_cursorWait); break;
+                                    case CursorIcon::Help: SetCursor((HCURSOR)self->m_cursorHelp); break;
+                                    default: SetCursor((HCURSOR)self->m_cursorArrow); break;
+                                }
+                                return TRUE;
+                            }
+                            break;
+                        }
                         case WM_SETFOCUS: {
                             self->m_isFocused = true;
                             self->m_onFocus.dispatch(self->onFocus);
@@ -320,6 +341,20 @@ namespace decomp {
         m_parent      = nullptr;
         m_handle      = nullptr;
 
+        m_cursorArrow     = nullptr;
+        m_cursorCrosshair = nullptr;
+        m_cursorHand      = nullptr;
+        m_cursorIBeam     = nullptr;
+        m_cursorSizeAll   = nullptr;
+        m_cursorSizeNESW  = nullptr;
+        m_cursorSizeNS    = nullptr;
+        m_cursorSizeNWSE  = nullptr;
+        m_cursorSizeWE    = nullptr;
+        m_cursorUpArrow   = nullptr;
+        m_cursorWait      = nullptr;
+        m_cursorHelp      = nullptr;
+        m_cursorIcon      = CursorIcon::Default;
+
         m_title         = "Window";
         m_borderEnabled = true;
         m_isOpen        = false;
@@ -337,6 +372,20 @@ namespace decomp {
         m_parent      = nullptr;
         m_handle      = nullptr;
 
+        m_cursorArrow     = nullptr;
+        m_cursorCrosshair = nullptr;
+        m_cursorHand      = nullptr;
+        m_cursorIBeam     = nullptr;
+        m_cursorSizeAll   = nullptr;
+        m_cursorSizeNESW  = nullptr;
+        m_cursorSizeNS    = nullptr;
+        m_cursorSizeNWSE  = nullptr;
+        m_cursorSizeWE    = nullptr;
+        m_cursorUpArrow   = nullptr;
+        m_cursorWait      = nullptr;
+        m_cursorHelp      = nullptr;
+        m_cursorIcon      = CursorIcon::Default;
+
         m_title = title;
         m_width = m_height = INT32_MAX;
         m_posX = m_posY = 0;
@@ -350,6 +399,20 @@ namespace decomp {
         m_application = nullptr;
         m_parent      = nullptr;
         m_handle      = nullptr;
+
+        m_cursorArrow     = nullptr;
+        m_cursorCrosshair = nullptr;
+        m_cursorHand      = nullptr;
+        m_cursorIBeam     = nullptr;
+        m_cursorSizeAll   = nullptr;
+        m_cursorSizeNESW  = nullptr;
+        m_cursorSizeNS    = nullptr;
+        m_cursorSizeNWSE  = nullptr;
+        m_cursorSizeWE    = nullptr;
+        m_cursorUpArrow   = nullptr;
+        m_cursorWait      = nullptr;
+        m_cursorHelp      = nullptr;
+        m_cursorIcon      = CursorIcon::Default;
 
         m_title  = "Window";
         m_width  = width;
@@ -366,6 +429,20 @@ namespace decomp {
         m_parent      = nullptr;
         m_handle      = nullptr;
 
+        m_cursorArrow     = nullptr;
+        m_cursorCrosshair = nullptr;
+        m_cursorHand      = nullptr;
+        m_cursorIBeam     = nullptr;
+        m_cursorSizeAll   = nullptr;
+        m_cursorSizeNESW  = nullptr;
+        m_cursorSizeNS    = nullptr;
+        m_cursorSizeNWSE  = nullptr;
+        m_cursorSizeWE    = nullptr;
+        m_cursorUpArrow   = nullptr;
+        m_cursorWait      = nullptr;
+        m_cursorHelp      = nullptr;
+        m_cursorIcon      = CursorIcon::Default;
+
         m_title  = title;
         m_width  = width;
         m_height = height;
@@ -381,6 +458,20 @@ namespace decomp {
         m_parent      = parent;
         m_handle      = nullptr;
 
+        m_cursorArrow     = nullptr;
+        m_cursorCrosshair = nullptr;
+        m_cursorHand      = nullptr;
+        m_cursorIBeam     = nullptr;
+        m_cursorSizeAll   = nullptr;
+        m_cursorSizeNESW  = nullptr;
+        m_cursorSizeNS    = nullptr;
+        m_cursorSizeNWSE  = nullptr;
+        m_cursorSizeWE    = nullptr;
+        m_cursorUpArrow   = nullptr;
+        m_cursorWait      = nullptr;
+        m_cursorHelp      = nullptr;
+        m_cursorIcon      = CursorIcon::Default;
+
         m_title = "Window";
         m_width = m_height = INT32_MAX;
         m_posX = m_posY = 0;
@@ -394,6 +485,20 @@ namespace decomp {
         m_application = nullptr;
         m_parent      = parent;
         m_handle      = nullptr;
+
+        m_cursorArrow     = nullptr;
+        m_cursorCrosshair = nullptr;
+        m_cursorHand      = nullptr;
+        m_cursorIBeam     = nullptr;
+        m_cursorSizeAll   = nullptr;
+        m_cursorSizeNESW  = nullptr;
+        m_cursorSizeNS    = nullptr;
+        m_cursorSizeNWSE  = nullptr;
+        m_cursorSizeWE    = nullptr;
+        m_cursorUpArrow   = nullptr;
+        m_cursorWait      = nullptr;
+        m_cursorHelp      = nullptr;
+        m_cursorIcon      = CursorIcon::Default;
 
         m_title = title;
         m_width = m_height = INT32_MAX;
@@ -409,6 +514,20 @@ namespace decomp {
         m_parent      = parent;
         m_handle      = nullptr;
 
+        m_cursorArrow     = nullptr;
+        m_cursorCrosshair = nullptr;
+        m_cursorHand      = nullptr;
+        m_cursorIBeam     = nullptr;
+        m_cursorSizeAll   = nullptr;
+        m_cursorSizeNESW  = nullptr;
+        m_cursorSizeNS    = nullptr;
+        m_cursorSizeNWSE  = nullptr;
+        m_cursorSizeWE    = nullptr;
+        m_cursorUpArrow   = nullptr;
+        m_cursorWait      = nullptr;
+        m_cursorHelp      = nullptr;
+        m_cursorIcon      = CursorIcon::Default;
+
         m_title  = "Window";
         m_width  = width;
         m_height = height;
@@ -423,6 +542,20 @@ namespace decomp {
         m_application = nullptr;
         m_parent      = parent;
         m_handle      = nullptr;
+
+        m_cursorArrow     = nullptr;
+        m_cursorCrosshair = nullptr;
+        m_cursorHand      = nullptr;
+        m_cursorIBeam     = nullptr;
+        m_cursorSizeAll   = nullptr;
+        m_cursorSizeNESW  = nullptr;
+        m_cursorSizeNS    = nullptr;
+        m_cursorSizeNWSE  = nullptr;
+        m_cursorSizeWE    = nullptr;
+        m_cursorUpArrow   = nullptr;
+        m_cursorWait      = nullptr;
+        m_cursorHelp      = nullptr;
+        m_cursorIcon      = CursorIcon::Default;
 
         m_title  = title;
         m_width  = width;
@@ -547,6 +680,31 @@ namespace decomp {
 
         m_isOpen = true;
         m_onOpen.dispatch(onOpen);
+        return true;
+    }
+
+    bool Window::setCursorIcon(CursorIcon icon) {
+        m_cursorIcon = icon;
+        if (!m_handle) {
+            return true;
+        }
+
+        switch (icon) {
+            case CursorIcon::Arrow: SetCursor((HCURSOR)m_cursorArrow); break;
+            case CursorIcon::Crosshair: SetCursor((HCURSOR)m_cursorCrosshair); break;
+            case CursorIcon::Hand: SetCursor((HCURSOR)m_cursorHand); break;
+            case CursorIcon::IBeam: SetCursor((HCURSOR)m_cursorIBeam); break;
+            case CursorIcon::SizeAll: SetCursor((HCURSOR)m_cursorSizeAll); break;
+            case CursorIcon::SizeNESW: SetCursor((HCURSOR)m_cursorSizeNESW); break;
+            case CursorIcon::SizeNS: SetCursor((HCURSOR)m_cursorSizeNS); break;
+            case CursorIcon::SizeNWSE: SetCursor((HCURSOR)m_cursorSizeNWSE); break;
+            case CursorIcon::SizeWE: SetCursor((HCURSOR)m_cursorSizeWE); break;
+            case CursorIcon::UpArrow: SetCursor((HCURSOR)m_cursorUpArrow); break;
+            case CursorIcon::Wait: SetCursor((HCURSOR)m_cursorWait); break;
+            case CursorIcon::Help: SetCursor((HCURSOR)m_cursorHelp); break;
+            default: SetCursor((HCURSOR)m_cursorArrow); break;
+        }
+
         return true;
     }
 
@@ -783,6 +941,19 @@ namespace decomp {
         if (!m_handle) {
             return false;
         }
+
+        m_cursorArrow     = LoadCursor(nullptr, IDC_ARROW);
+        m_cursorCrosshair = LoadCursor(nullptr, IDC_CROSS);
+        m_cursorHand      = LoadCursor(nullptr, IDC_HAND);
+        m_cursorIBeam     = LoadCursor(nullptr, IDC_IBEAM);
+        m_cursorSizeAll   = LoadCursor(nullptr, IDC_SIZEALL);
+        m_cursorSizeNESW  = LoadCursor(nullptr, IDC_SIZENESW);
+        m_cursorSizeNS    = LoadCursor(nullptr, IDC_SIZENS);
+        m_cursorSizeNWSE  = LoadCursor(nullptr, IDC_SIZENWSE);
+        m_cursorSizeWE    = LoadCursor(nullptr, IDC_SIZEWE);
+        m_cursorUpArrow   = LoadCursor(nullptr, IDC_UPARROW);
+        m_cursorWait      = LoadCursor(nullptr, IDC_WAIT);
+        m_cursorHelp      = LoadCursor(nullptr, IDC_HELP);
 
         ShowWindow((HWND)m_handle, SW_SHOWNORMAL);
         SetWindowText((HWND)m_handle, m_title.c_str());

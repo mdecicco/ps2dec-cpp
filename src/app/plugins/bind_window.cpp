@@ -9,6 +9,25 @@
 #include <tspp/utils/Docs.h>
 
 namespace decomp {
+    void bindCursor() {
+        bind::EnumTypeBuilder<CursorIcon> cursorIcon = bind::type<CursorIcon>("CursorIcon");
+        tspp::describe(cursorIcon.getType()).desc("An enum representing a cursor icon");
+
+        cursorIcon.addEnumValue("Default", CursorIcon::Default);
+        cursorIcon.addEnumValue("Arrow", CursorIcon::Arrow);
+        cursorIcon.addEnumValue("Crosshair", CursorIcon::Crosshair);
+        cursorIcon.addEnumValue("Hand", CursorIcon::Hand);
+        cursorIcon.addEnumValue("IBeam", CursorIcon::IBeam);
+        cursorIcon.addEnumValue("SizeAll", CursorIcon::SizeAll);
+        cursorIcon.addEnumValue("SizeNESW", CursorIcon::SizeNESW);
+        cursorIcon.addEnumValue("SizeNS", CursorIcon::SizeNS);
+        cursorIcon.addEnumValue("SizeNWSE", CursorIcon::SizeNWSE);
+        cursorIcon.addEnumValue("SizeWE", CursorIcon::SizeWE);
+        cursorIcon.addEnumValue("UpArrow", CursorIcon::UpArrow);
+        cursorIcon.addEnumValue("Wait", CursorIcon::Wait);
+        cursorIcon.addEnumValue("Help", CursorIcon::Help);
+    }
+
     void bindKeyboardKeyEnum() {
         bind::EnumTypeBuilder<KeyboardKey> keyboardKey = bind::type<KeyboardKey>("KeyboardKey");
         tspp::describe(keyboardKey.getType()).desc("An enum representing a keyboard key");
@@ -201,6 +220,10 @@ namespace decomp {
             .desc("Sets whether the window is open")
             .param(0, "open", "Whether the window should be open")
             .returns("true if the operation was successful, false otherwise");
+
+        tspp::describe(window.method("setCursorIcon", &Window::setCursorIcon))
+            .desc("Sets the cursor icon of the window")
+            .param(0, "icon", "The cursor icon to set");
 
         tspp::describe(window.method("isOpen", &Window::isOpen))
             .desc("Checks if the window is open")
@@ -541,6 +564,7 @@ namespace decomp {
         bind::Namespace* ns = new bind::Namespace("window");
         bind::Registry::Add(ns);
 
+        bindCursor();
         bindKeyboardKeyEnum();
         bindMouseButtonEnum();
         bindMonitorInfoType(ns);
