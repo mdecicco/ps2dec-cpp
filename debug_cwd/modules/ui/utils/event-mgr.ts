@@ -201,12 +201,12 @@ export class UIEventManager {
     }
 
     init() {
-        this.m_window.onMouseMove(this.onMouseMove.bind(this));
-        this.m_window.onMouseDown(this.onMouseDown.bind(this));
-        this.m_window.onMouseUp(this.onMouseUp.bind(this));
-        this.m_window.onKeyDown(this.onKeyDown.bind(this));
-        this.m_window.onKeyUp(this.onKeyUp.bind(this));
-        this.m_window.onScroll(this.onScroll.bind(this));
+        this.m_mouseMoveListener = this.m_window.onMouseMove(this.onMouseMove.bind(this));
+        this.m_mouseDownListener = this.m_window.onMouseDown(this.onMouseDown.bind(this));
+        this.m_mouseUpListener = this.m_window.onMouseUp(this.onMouseUp.bind(this));
+        this.m_keyDownListener = this.m_window.onKeyDown(this.onKeyDown.bind(this));
+        this.m_keyUpListener = this.m_window.onKeyUp(this.onKeyUp.bind(this));
+        this.m_scrollListener = this.m_window.onScroll(this.onScroll.bind(this));
     }
 
     shutdown() {
@@ -233,6 +233,11 @@ export class UIEventManager {
         if (this.m_keyUpListener) {
             this.m_window.offKeyUp(this.m_keyUpListener);
             this.m_keyUpListener = null;
+        }
+
+        if (this.m_scrollListener) {
+            this.m_window.offScroll(this.m_scrollListener);
+            this.m_scrollListener = null;
         }
     }
 
@@ -443,34 +448,44 @@ export class UIEventManager {
         const altKey = this.m_keysDown.has(KeyboardKey.LeftAlt) || this.m_keysDown.has(KeyboardKey.RightAlt);
 
         if (this.m_lastElementBelowCursor && element !== this.m_lastElementBelowCursor) {
-            this.m_lastElementBelowCursor.rendererState.isHovered = false;
-            const relPos = this.getRelativePos(this.m_lastElementBelowCursor, pos);
-            const mouseLeave = new MouseEvent(
-                this.m_lastElementBelowCursor,
-                relPos,
-                pos,
-                deltaPos,
-                shiftKey,
-                ctrlKey,
-                altKey,
-                null
-            );
-            this.m_lastElementBelowCursor.dispatch('mouseleave', mouseLeave);
+            let e = element;
+            while (e !== this.m_lastElementBelowCursor && e.parent) {
+                e = e.parent;
+            }
 
-            const mouseOut = new MouseEvent(
-                this.m_lastElementBelowCursor,
-                relPos,
-                pos,
-                deltaPos,
-                shiftKey,
-                ctrlKey,
-                altKey,
-                null
-            );
+            if (e !== this.m_lastElementBelowCursor) {
+                // the new target is not a child of the last element below cursor,
+                // we need to send a mouseleave event to the last element below cursor
 
-            this.propagate(this.m_lastElementBelowCursor, mouseOut, e => e.dispatch('mouseout', mouseOut));
+                this.m_lastElementBelowCursor.rendererState.isHovered = false;
+                const relPos = this.getRelativePos(this.m_lastElementBelowCursor, pos);
+                const mouseLeave = new MouseEvent(
+                    this.m_lastElementBelowCursor,
+                    relPos,
+                    pos,
+                    deltaPos,
+                    shiftKey,
+                    ctrlKey,
+                    altKey,
+                    null
+                );
+                this.m_lastElementBelowCursor.dispatch('mouseleave', mouseLeave);
 
-            this.m_lastElementBelowCursor = null;
+                const mouseOut = new MouseEvent(
+                    this.m_lastElementBelowCursor,
+                    relPos,
+                    pos,
+                    deltaPos,
+                    shiftKey,
+                    ctrlKey,
+                    altKey,
+                    null
+                );
+
+                this.propagate(this.m_lastElementBelowCursor, mouseOut, e => e.dispatch('mouseout', mouseOut));
+
+                this.m_lastElementBelowCursor = null;
+            }
         }
 
         if (element !== this.m_lastElementBelowCursor) {
