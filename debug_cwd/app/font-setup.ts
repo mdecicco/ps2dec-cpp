@@ -4,8 +4,8 @@ import { UIRoot } from 'ui/root';
 export function setupFonts(root: UIRoot) {
     root.addFontFamily(
         {
-            name: 'arial',
-            filePath: 'font/ARIAL.TTF',
+            name: 'Roboto',
+            filePath: 'font/roboto.ttf',
             sdfFactorMax: 1,
             sdfFactorMin: 0
         },

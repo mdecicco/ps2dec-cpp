@@ -364,8 +364,8 @@ class NewTestPlugin extends IPlugin {
         const root = createRoot(window);
         root.addFontFamily(
             {
-                name: 'arial',
-                filePath: 'font/ARIAL.TTF',
+                name: 'Roboto',
+                filePath: 'font/roboto.ttf',
                 sdfFactorMax: 1,
                 sdfFactorMin: 0
             },
