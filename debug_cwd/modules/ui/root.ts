@@ -9,6 +9,7 @@ import { TextNode } from './types/text-node';
 import { RootNode } from './types/root-node';
 import { GeometryNode } from './types/geometry-node';
 import { FontFamilyOptions, FontManager } from './utils/font-mgr';
+import { Element } from './renderer/element';
 
 export * from './components';
 export { StyleProps, StyleAttributes, ParsedStyleProps, ParsedStyleAttributes } from './types';
@@ -105,6 +106,10 @@ export class UIRoot extends ReactRoot {
         this.m_fontMgr.shutdown();
         this.m_renderer.shutdown();
         this.m_isShutdown = true;
+    }
+
+    get rootElement(): Element | null {
+        return this.m_renderer.root;
     }
 
     addFontFamily(fontFamily: FontFamilyOptions, isDefault: boolean = false) {

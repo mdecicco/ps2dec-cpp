@@ -388,15 +388,14 @@ class NewTestPlugin extends IPlugin {
 
     onInitialize() {
         const window = new Window();
-        decompiler.addWindow(window);
 
-        const openListener = window.onOpen(() => {
-            window.offOpen(openListener);
+        const openListener = window.addListener('open', () => {
+            openListener.remove();
             this.onWindowOpened(window);
         });
 
         setTimeout(() => {
-            window.setOpen(true);
+            window.open();
         }, 1000);
     }
 }

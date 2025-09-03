@@ -24,6 +24,7 @@ import { ClipRectManager } from './clip-rect-mgr';
 import { FontFamily } from './font-mgr';
 import { InstanceManager } from './instance-mgr';
 import { FragmentShader, VertexShader } from '../renderer/shaders';
+import { EventListener } from 'event';
 
 export class RenderContext {
     private m_window: Window;
@@ -44,7 +45,7 @@ export class RenderContext {
     private m_uniformFormat: Render.DataFormat | null;
     private m_defaultTexture: Render.Texture | null;
     private m_windowSize: { width: u32; height: u32 };
-    private m_resizeListener: u32 | null;
+    private m_resizeListener: EventListener | null;
     private m_currentFrame: Render.FrameContext | null;
     private m_clipRectManager: ClipRectManager;
     private m_instanceManager: InstanceManager;
@@ -54,7 +55,7 @@ export class RenderContext {
     private m_drawCalls: DrawCall[];
 
     constructor(window: Window) {
-        const size = window.getSize();
+        const size = window.size;
 
         this.m_window = window;
         this.m_instance = null;
@@ -141,7 +142,7 @@ export class RenderContext {
             throw new Error('Failed to initialize Vulkan instance');
         }
 
-        this.m_surface = new Render.Surface(this.m_instance, this.m_window);
+        this.m_surface = new Render.Surface(this.m_instance, this.m_window.internalHandle);
         if (!this.m_surface.init()) {
             this.shutdown();
             throw new Error('Failed to initialize Vulkan surface');
@@ -193,7 +194,7 @@ export class RenderContext {
             throw new Error('Swap chain is invalid');
         }
 
-        this.m_resizeListener = this.m_window.onResize((width, height) => {
+        this.m_resizeListener = this.m_window.addListener('resize', (width, height) => {
             this.onResize(width, height);
         });
 
@@ -328,7 +329,7 @@ export class RenderContext {
 
     shutdown() {
         if (this.m_resizeListener) {
-            this.m_window.offResize(this.m_resizeListener);
+            this.m_resizeListener.remove();
             this.m_resizeListener = null;
         }
 

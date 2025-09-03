@@ -3,6 +3,7 @@ export const VertexShader = `
 
 struct Instance {
     vec3 offset;
+    float opacity;
     int clipRectIndex;
 };
 
@@ -53,6 +54,7 @@ struct ClippingInfo {
 
 struct Instance {
     vec3 offset;
+    float opacity;
     int clipRectIndex;
 };
 
@@ -90,10 +92,9 @@ float median(float r, float g, float b) {
 }
 
 void main() {
-    float opacity = v_color.a;
-
     Instance instance = instances[v_instanceIdx];
     int clipRectIndex = instance.clipRectIndex;
+    float opacity = v_color.a * instance.opacity;
 
     if (clipRectIndex != -1) {
         ClippingInfo clip = clipRects[clipRectIndex];

@@ -21,6 +21,7 @@ import {
 } from '../types';
 import { FontFamily, FontManager } from '../utils/font-mgr';
 import { UIEventManager } from '../utils/event-mgr';
+import { EventListener } from 'event';
 
 function clipRectsIntersect(a: ClientRect, b: ClientRect): boolean {
     if (b.x + b.width < a.x || b.x > a.x + a.width) return false;
@@ -36,7 +37,7 @@ export class UIRenderer {
     private m_renderContext: RenderContext;
     private m_treeGenerator: TreeGenerator;
     private m_lastTree: Element | null;
-    private m_resizeListener: u32 | null;
+    private m_resizeListener: EventListener | null;
     private m_boxDraw: DrawCall | null;
     private m_windowSize: { width: u32; height: u32 };
     private m_textDraws: Map<FontFamily, TextDraw>;
@@ -52,13 +53,13 @@ export class UIRenderer {
         this.m_boxDraw = null;
         this.m_textDraws = new Map<FontFamily, TextDraw>();
 
-        const windowSize = window.getSize();
+        const windowSize = window.size;
         this.m_windowSize = { width: windowSize.x, height: windowSize.y };
     }
 
     init() {
         this.m_renderContext.init();
-        this.m_resizeListener = this.m_window.onResize(this.onResize.bind(this));
+        this.m_resizeListener = this.m_window.addListener('resize', this.onResize.bind(this));
         this.m_eventMgr.init();
 
         this.m_boxDraw = this.m_renderContext.allocateDrawCall(32768);
@@ -70,7 +71,7 @@ export class UIRenderer {
 
     shutdown() {
         if (this.m_resizeListener) {
-            this.m_window.offResize(this.m_resizeListener);
+            this.m_resizeListener.remove();
             this.m_resizeListener = null;
         }
 
@@ -143,6 +144,7 @@ export class UIRenderer {
                 offsetX: x + offsetX,
                 offsetY: y + offsetY,
                 offsetZ: 0,
+                opacity: node.style.computedOpacity,
                 clipRectIndex: clipRectIndex
             });
 
@@ -166,6 +168,7 @@ export class UIRenderer {
             offsetX: geometry.offsetPosition.x + offsetX,
             offsetY: geometry.offsetPosition.y + offsetY,
             offsetZ: geometry.offsetPosition.z,
+            opacity: node.style.computedOpacity,
             clipRectIndex: clipRectIndex
         });
 
@@ -189,6 +192,7 @@ export class UIRenderer {
             offsetX: geometry.offsetPosition.x + x + offsetX,
             offsetY: geometry.offsetPosition.y + y + offsetY,
             offsetZ: geometry.offsetPosition.z,
+            opacity: node.style.computedOpacity,
             clipRectIndex: clipRectIndex
         });
 
@@ -196,7 +200,7 @@ export class UIRenderer {
     }
 
     private drawNode(node: Element) {
-        if (!this.m_boxDraw) return;
+        if (!this.m_boxDraw || node.style.computedOpacity === 0) return;
 
         const clipRects = this.m_renderContext.clipRects;
         const clip = clipRects.currentClip;
@@ -229,7 +233,7 @@ export class UIRenderer {
 
     private doLayout() {
         if (!this.m_lastTree) return;
-        if (!this.m_window.isOpen()) return;
+        if (!this.m_window.isOpen) return;
         if (!this.m_renderContext.isInitialized) this.init();
         if (!this.m_boxDraw) return;
 
@@ -237,7 +241,7 @@ export class UIRenderer {
         const layoutEngine = new LayoutEngine(this.m_window, this.m_lastTree);
         layoutEngine.execute();
         let end = Date.now();
-        console.debug(`Layout time: ${end - start}ms`);
+        // console.debug(`Layout time: ${end - start}ms`);
 
         start = Date.now();
         if (this.m_renderContext.begin()) {
@@ -252,8 +256,12 @@ export class UIRenderer {
             this.m_renderContext.endRenderPass();
             this.m_renderContext.end();
             end = Date.now();
-            console.debug(`Render time: ${end - start}ms`);
+            // console.debug(`Render time: ${end - start}ms`);
         }
+    }
+
+    get root(): Element | null {
+        return this.m_lastTree;
     }
 
     render(root: UINode) {

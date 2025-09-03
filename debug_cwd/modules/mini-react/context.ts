@@ -1,7 +1,6 @@
-import { compareProps } from './logic';
 import { FunctionComponent, ReactNode } from './types';
 import { useEffect } from './useEffect';
-import { ReactRoot, TreeNode } from './vdom';
+import { TreeNode } from './vdom';
 
 type ContextProps<T> = {
     value: T;

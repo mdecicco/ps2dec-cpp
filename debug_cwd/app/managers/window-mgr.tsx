@@ -1,5 +1,4 @@
 import * as React from 'mini-react';
-import { decompiler } from 'decompiler';
 import { Window } from 'window';
 import { createRoot } from 'ui';
 import { UIRoot } from 'ui/root';
@@ -8,6 +7,7 @@ import { WindowProvider } from 'components';
 import { WindowMap, WindowId, WindowIds, OpenWindowParams, WindowProps } from '@app/windows';
 import { setupFonts } from '@app/font-setup';
 import { ThemeProvider } from '@app/contexts';
+import { RootElementProvider } from 'hooks';
 
 type RequestCloseCallback = () => boolean | Promise<boolean>;
 
@@ -43,7 +43,6 @@ export class WindowManager {
             const height = 'height' in Component ? Component.height || 600 : 600;
 
             const window = new Window(title, width, height);
-            decompiler.addWindow(window);
 
             const reactRoot = createRoot(window);
 
@@ -59,7 +58,9 @@ export class WindowManager {
             reactRoot.render(
                 <WindowProvider window={window}>
                     <ThemeProvider>
-                        <WindowProxy id={id} />
+                        <RootElementProvider root={reactRoot}>
+                            <WindowProxy id={id} />
+                        </RootElementProvider>
                     </ThemeProvider>
                 </WindowProvider>
             );
@@ -77,7 +78,7 @@ export class WindowManager {
 
         for (const id of WindowIds) {
             windowData[id].reactRoot.unmount();
-            windowData[id].window.setOpen(false);
+            windowData[id].window.close();
             windowData[id].window.destroy();
         }
 
@@ -95,11 +96,11 @@ export class WindowManager {
         }
 
         const { window } = this.m_windowData[id];
-        const isOpen = window.isOpen();
+        const isOpen = window.isOpen;
         if (isOpen) return;
 
         this.m_windowData[id].props = (args.length > 0 ? (args as any[])[0] : {}) as WindowProps<W>;
-        this.m_windowData[id].window.setOpen(true);
+        this.m_windowData[id].window.open();
     }
 
     async closeWindow(id: WindowId, force?: boolean) {
@@ -109,20 +110,20 @@ export class WindowManager {
 
         const { window, requestClose } = this.m_windowData[id];
 
-        const isOpen = window.isOpen();
+        const isOpen = window.isOpen;
         if (!isOpen) return true;
 
         if (requestClose && !force) {
             const result = await requestClose();
             if (result) {
-                window.setOpen(false);
+                window.close();
                 return true;
             }
 
             return false;
         }
 
-        window.setOpen(false);
+        window.close();
         return true;
     }
 

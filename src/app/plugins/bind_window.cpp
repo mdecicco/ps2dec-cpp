@@ -182,7 +182,7 @@ namespace decomp {
     }
 
     void bindWindowType(bind::Namespace* ns) {
-        bind::ObjectTypeBuilder<Window> window = ns->type<Window>("Window");
+        bind::ObjectTypeBuilder<Window> window = ns->type<Window>("ClientWindow");
         tspp::describe(window.ctor()).desc("Creates a new window with default settings");
 
         tspp::describe(window.ctor<const utils::String&>())
@@ -561,7 +561,7 @@ namespace decomp {
     }
 
     void bindWindowInterface() {
-        bind::Namespace* ns = new bind::Namespace("window");
+        bind::Namespace* ns = new bind::Namespace("client-window");
         bind::Registry::Add(ns);
 
         bindCursor();

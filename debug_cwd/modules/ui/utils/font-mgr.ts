@@ -732,6 +732,7 @@ export class FontFamily {
 }
 
 export class FontManager {
+    private static m_defaultFontSize: number = 16;
     private m_fontFamilies: Map<string, FontFamily[]>;
     private m_defaultFont: FontFamily | null;
 
@@ -782,6 +783,14 @@ export class FontManager {
         }
 
         return this.m_defaultFont;
+    }
+
+    static set defaultFontSize(size: number) {
+        this.m_defaultFontSize = size;
+    }
+
+    static get defaultFontSize() {
+        return this.m_defaultFontSize;
     }
 
     static extractTextProperties(style: Style, maxWidth: number, maxHeight: number): TextProperties {

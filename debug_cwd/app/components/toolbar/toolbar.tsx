@@ -1,4 +1,3 @@
-import { EasingMode, useInterpolatedColor } from 'hooks';
 import * as React from 'mini-react';
 import { Box, BoxProps, StyleProps } from 'ui';
 
@@ -10,13 +9,11 @@ export const Toolbar: React.FC<ToolbarProps> = props => {
     const { style, children, ...rest } = props;
     const theme = useTheme();
 
-    const [backgroundColor] = useInterpolatedColor(theme.colors.surface, 250, EasingMode.EaseInOut);
-
     const mergedStyle: StyleProps = {
-        backgroundColor,
+        backgroundColor: theme.colors.surface,
         width: '100%',
         padding: theme.spacing.sm,
-        borderBottomColor: theme.colors.accent,
+        borderBottomColor: theme.colors.border,
         borderBottomWidth: '1px',
         borderBottomStyle: 'solid',
         flexDirection: 'row',

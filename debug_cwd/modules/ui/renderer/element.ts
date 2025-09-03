@@ -24,7 +24,7 @@ import {
 } from '../types/geometry';
 
 import { Style } from './style';
-import { getCompleteStyle, FontManager, VertexArray } from '../utils';
+import { getCompleteStyle, FontManager, VertexArray, pointInClientRect } from '../utils';
 import { buildBoxGeometry } from '../utils/box-geometry';
 
 type ElementEvents = {
@@ -299,6 +299,10 @@ export class Element extends EventProducer<ElementEvents> {
         return this.m_geometry;
     }
 
+    get clientRect() {
+        return this.m_style.clientRect;
+    }
+
     get scrollOffset() {
         return this.m_scrollOffset;
     }
@@ -347,6 +351,10 @@ export class Element extends EventProducer<ElementEvents> {
 
     get contentSize() {
         return this.m_contentSize;
+    }
+
+    containsPoint(pos: vec2) {
+        return pointInClientRect(pos, this.m_style.clientRect);
     }
 
     /** @internal */
@@ -534,8 +542,10 @@ export class Element extends EventProducer<ElementEvents> {
         element.m_style.wordWrap = s.wordWrap;
         element.m_style.overflow = s.overflow;
         element.m_style.textOverflow = s.textOverflow;
+        element.m_style.cursor = s.cursor;
         element.m_style.color = s.color;
         element.m_style.backgroundColor = s.backgroundColor;
+        element.m_style.opacity = s.opacity;
         element.m_style.borderTopWidth = s.border.top.width;
         element.m_style.borderRightWidth = s.border.right.width;
         element.m_style.borderBottomWidth = s.border.bottom.width;

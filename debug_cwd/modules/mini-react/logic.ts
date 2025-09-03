@@ -1,4 +1,4 @@
-import { ComponentProps, isNodeIterable, ReactNode } from './types';
+import { ComponentProps, isNodeIterable, ReactElement, ReactNode } from './types';
 import { isChanged } from 'is-changed';
 
 /**
@@ -60,4 +60,14 @@ export function flattenChildren(children: ReactNode): Exclude<ReactNode, null | 
     }
 
     return [children];
+}
+
+export function cloneElement<P = {}>(element: ReactElement<P>, props: P): ReactElement<P> {
+    return {
+        ...element,
+        props: {
+            ...element.props,
+            ...props
+        }
+    };
 }

@@ -180,6 +180,7 @@ export class TreeNode extends EventProducer<TreeNodeEvents> {
         this.m_children = newChildren;
 
         for (const [node, props] of updateNodes) {
+            node.m_isDirty = true;
             node.render(props);
         }
 
@@ -322,7 +323,7 @@ export class TreeNode extends EventProducer<TreeNodeEvents> {
     static fromReactNode(root: ReactRoot, sourceNode: ReactElement<any>, parent: TreeNode | null): TreeNode;
     static fromReactNode(root: ReactRoot, sourceNode: ReactNode, parent: TreeNode | null): TreeNode | null;
     static fromReactNode(root: ReactRoot, sourceNode: ReactNode, parent: TreeNode | null): TreeNode | null {
-        if (sourceNode === null || sourceNode === undefined) return null;
+        if (sourceNode === null || sourceNode === undefined || sourceNode === false) return null;
 
         if (isNodeIterable(sourceNode)) {
             return null;

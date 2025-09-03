@@ -32,8 +32,23 @@ export type StyleAttributes = {
     wordWrap: 'normal' | 'break-word';
     overflow: 'visible' | 'hidden' | 'scroll';
     textOverflow: 'clip' | 'ellipsis' | 'unset';
+    cursor:
+        | 'default'
+        | 'arrow'
+        | 'crosshair'
+        | 'pointer'
+        | 'i-beam'
+        | 'size-all'
+        | 'size-nesw'
+        | 'size-ns'
+        | 'size-nwse'
+        | 'size-we'
+        | 'up-arrow'
+        | 'wait'
+        | 'help';
     color: string;
     backgroundColor: string;
+    opacity: number;
     borderTopWidth: string;
     borderRightWidth: string;
     borderBottomWidth: string;
@@ -180,9 +195,20 @@ export enum SizeUnit {
     vh = 5
 }
 
+export enum SizeInstruction {
+    Add = 0,
+    Sub,
+    Mul,
+    Div
+}
+
 export type Size = {
     value: number;
     unit: SizeUnit;
+    op: {
+        instr: SizeInstruction;
+        value: Size;
+    } | null;
 };
 
 export type Color = {
@@ -273,8 +299,10 @@ export type ParsedStyleAttributes = {
     wordWrap: WordWrap;
     overflow: Overflow;
     textOverflow: TextOverflow;
+    cursor: CursorIcon;
     color: Color;
     backgroundColor: Color;
+    opacity: number;
     border: Border;
     margin: Margin;
     padding: Padding;

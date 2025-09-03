@@ -6,5 +6,5 @@ export { useRef } from './useRef';
 export { useMemo } from './useMemo';
 export { createContext, useContext, useContextTree, Context, ContextTreeNode } from './context';
 export { Fragment } from './fragment';
-export { flattenChildren, compareProps, comparePropsDeep } from './logic';
+export { flattenChildren, compareProps, comparePropsDeep, cloneElement } from './logic';
 export * from './types';

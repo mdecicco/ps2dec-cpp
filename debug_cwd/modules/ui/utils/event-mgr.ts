@@ -2,44 +2,11 @@ import { vec2 } from 'math-ext';
 import { Window } from 'window';
 
 import { Element } from '../renderer/element';
-import { ClientRect, Overflow } from '../types/style';
+import { Overflow } from '../types/style';
 import { TextNode } from '../types/text-node';
 import { KeyboardEvent, MouseEvent, UIEvent, WheelEvent } from '../types/events';
 import { getScrollBarHandles } from './box-geometry';
-
-function pointInClipRect(pos: vec2, rect: ClientRect): boolean {
-    if (pos.x < rect.left || pos.x > rect.right) return false;
-    if (pos.y < rect.top || pos.y > rect.bottom) return false;
-
-    const inTopLeft = pos.x < rect.left + rect.topLeftRadius && pos.y < rect.top + rect.topLeftRadius;
-    const inTopRight = pos.x > rect.right - rect.topRightRadius && pos.y < rect.top + rect.topRightRadius;
-    const inBottomRight = pos.x > rect.right - rect.bottomRightRadius && pos.y > rect.bottom - rect.bottomRightRadius;
-    const inBottomLeft = pos.x < rect.left + rect.bottomLeftRadius && pos.y > rect.bottom - rect.bottomLeftRadius;
-
-    if (inTopLeft && rect.topLeftRadius > 0.0) {
-        const center = new vec2(rect.left + rect.topLeftRadius, rect.top + rect.topLeftRadius);
-        const diff = new vec2();
-        vec2.sub(diff, pos, center);
-        if (diff.lengthSq > rect.topLeftRadius * rect.topLeftRadius) return false;
-    } else if (inTopRight && rect.topRightRadius > 0.0) {
-        const center = new vec2(rect.right - rect.topRightRadius, rect.top + rect.topRightRadius);
-        const diff = new vec2();
-        vec2.sub(diff, pos, center);
-        if (diff.lengthSq > rect.topRightRadius * rect.topRightRadius) return false;
-    } else if (inBottomRight && rect.bottomRightRadius > 0.0) {
-        const center = new vec2(rect.right - rect.bottomRightRadius, rect.bottom - rect.bottomRightRadius);
-        const diff = new vec2();
-        vec2.sub(diff, pos, center);
-        if (diff.lengthSq > rect.bottomRightRadius * rect.bottomRightRadius) return false;
-    } else if (inBottomLeft && rect.bottomLeftRadius > 0.0) {
-        const center = new vec2(rect.left + rect.bottomLeftRadius, rect.bottom - rect.bottomLeftRadius);
-        const diff = new vec2();
-        vec2.sub(diff, pos, center);
-        if (diff.lengthSq > rect.bottomLeftRadius * rect.bottomLeftRadius) return false;
-    }
-
-    return true;
-}
+import { EventListener } from 'event';
 
 function pointInBox(pos: vec2, x: f32, y: f32, width: f32, height: f32): boolean {
     if (pos.x < x || pos.x > x + width) return false;
@@ -177,12 +144,12 @@ export class UIEventManager {
     private m_keysDown: Set<KeyboardKey>;
     private m_mouseButtonsDown: Set<MouseButton>;
     private m_cursorPosition: vec2;
-    private m_mouseMoveListener: u32 | null;
-    private m_mouseDownListener: u32 | null;
-    private m_mouseUpListener: u32 | null;
-    private m_keyDownListener: u32 | null;
-    private m_keyUpListener: u32 | null;
-    private m_scrollListener: u32 | null;
+    private m_mouseMoveListener: EventListener | null;
+    private m_mouseDownListener: EventListener | null;
+    private m_mouseUpListener: EventListener | null;
+    private m_keyDownListener: EventListener | null;
+    private m_keyUpListener: EventListener | null;
+    private m_scrollListener: EventListener | null;
 
     constructor(window: Window) {
         this.m_window = window;
@@ -201,42 +168,42 @@ export class UIEventManager {
     }
 
     init() {
-        this.m_mouseMoveListener = this.m_window.onMouseMove(this.onMouseMove.bind(this));
-        this.m_mouseDownListener = this.m_window.onMouseDown(this.onMouseDown.bind(this));
-        this.m_mouseUpListener = this.m_window.onMouseUp(this.onMouseUp.bind(this));
-        this.m_keyDownListener = this.m_window.onKeyDown(this.onKeyDown.bind(this));
-        this.m_keyUpListener = this.m_window.onKeyUp(this.onKeyUp.bind(this));
-        this.m_scrollListener = this.m_window.onScroll(this.onScroll.bind(this));
+        this.m_mouseMoveListener = this.m_window.addListener('mouseMove', this.onMouseMove.bind(this));
+        this.m_mouseDownListener = this.m_window.addListener('mouseDown', this.onMouseDown.bind(this));
+        this.m_mouseUpListener = this.m_window.addListener('mouseUp', this.onMouseUp.bind(this));
+        this.m_keyDownListener = this.m_window.addListener('keyDown', this.onKeyDown.bind(this));
+        this.m_keyUpListener = this.m_window.addListener('keyUp', this.onKeyUp.bind(this));
+        this.m_scrollListener = this.m_window.addListener('scroll', this.onScroll.bind(this));
     }
 
     shutdown() {
         if (this.m_mouseMoveListener) {
-            this.m_window.offMouseMove(this.m_mouseMoveListener);
+            this.m_mouseMoveListener.remove();
             this.m_mouseMoveListener = null;
         }
 
         if (this.m_mouseDownListener) {
-            this.m_window.offMouseDown(this.m_mouseDownListener);
+            this.m_mouseDownListener.remove();
             this.m_mouseDownListener = null;
         }
 
         if (this.m_mouseUpListener) {
-            this.m_window.offMouseUp(this.m_mouseUpListener);
+            this.m_mouseUpListener.remove();
             this.m_mouseUpListener = null;
         }
 
         if (this.m_keyDownListener) {
-            this.m_window.offKeyDown(this.m_keyDownListener);
+            this.m_keyDownListener.remove();
             this.m_keyDownListener = null;
         }
 
         if (this.m_keyUpListener) {
-            this.m_window.offKeyUp(this.m_keyUpListener);
+            this.m_keyUpListener.remove();
             this.m_keyUpListener = null;
         }
 
         if (this.m_scrollListener) {
-            this.m_window.offScroll(this.m_scrollListener);
+            this.m_scrollListener.remove();
             this.m_scrollListener = null;
         }
     }
@@ -251,7 +218,7 @@ export class UIEventManager {
         if (!currentNode) currentNode = this.m_tree!;
 
         let isInSelf = false;
-        if (pointInClipRect(pos, currentNode.style.clientRect)) {
+        if (currentNode.containsPoint(pos)) {
             isInSelf = true;
         } else if (currentNode.style.overflow !== Overflow.Visible) {
             // None of element's children will be visible at this position,
@@ -448,55 +415,52 @@ export class UIEventManager {
         const altKey = this.m_keysDown.has(KeyboardKey.LeftAlt) || this.m_keysDown.has(KeyboardKey.RightAlt);
 
         if (this.m_lastElementBelowCursor && element !== this.m_lastElementBelowCursor) {
-            let e = element;
-            while (e !== this.m_lastElementBelowCursor && e.parent) {
+            let e: Element | null = this.m_lastElementBelowCursor;
+            while (e) {
+                if (e.rendererState.isHovered && !e.containsPoint(pos)) {
+                    e.rendererState.isHovered = false;
+                    const relPos = this.getRelativePos(e, pos);
+                    const mouseLeave = new MouseEvent(e, relPos, pos, deltaPos, shiftKey, ctrlKey, altKey, null);
+
+                    e.dispatch('mouseleave', mouseLeave);
+                }
                 e = e.parent;
             }
 
-            if (e !== this.m_lastElementBelowCursor) {
-                // the new target is not a child of the last element below cursor,
-                // we need to send a mouseleave event to the last element below cursor
+            const mouseOut = new MouseEvent(
+                this.m_lastElementBelowCursor,
+                relPos,
+                pos,
+                deltaPos,
+                shiftKey,
+                ctrlKey,
+                altKey,
+                null
+            );
 
-                this.m_lastElementBelowCursor.rendererState.isHovered = false;
-                const relPos = this.getRelativePos(this.m_lastElementBelowCursor, pos);
-                const mouseLeave = new MouseEvent(
-                    this.m_lastElementBelowCursor,
-                    relPos,
-                    pos,
-                    deltaPos,
-                    shiftKey,
-                    ctrlKey,
-                    altKey,
-                    null
-                );
-                this.m_lastElementBelowCursor.dispatch('mouseleave', mouseLeave);
+            this.propagate(this.m_lastElementBelowCursor, mouseOut, e => e.dispatch('mouseout', mouseOut));
 
-                const mouseOut = new MouseEvent(
-                    this.m_lastElementBelowCursor,
-                    relPos,
-                    pos,
-                    deltaPos,
-                    shiftKey,
-                    ctrlKey,
-                    altKey,
-                    null
-                );
-
-                this.propagate(this.m_lastElementBelowCursor, mouseOut, e => e.dispatch('mouseout', mouseOut));
-
-                this.m_lastElementBelowCursor = null;
-            }
+            this.m_lastElementBelowCursor = null;
         }
 
         if (element !== this.m_lastElementBelowCursor) {
             this.m_lastElementBelowCursor = element;
-            element.rendererState.isHovered = true;
-            const mouseEnter = new MouseEvent(element, relPos, pos, deltaPos, shiftKey, ctrlKey, altKey, null);
-            element.dispatch('mouseenter', mouseEnter);
+
+            let e: Element | null = element;
+            while (e) {
+                if (!e.rendererState.isHovered && e.containsPoint(pos)) {
+                    e.rendererState.isHovered = true;
+                    const mouseEnter = new MouseEvent(e, relPos, pos, deltaPos, shiftKey, ctrlKey, altKey, null);
+                    e.dispatch('mouseenter', mouseEnter);
+                }
+                e = e.parent;
+            }
 
             const mouseOver = new MouseEvent(element, relPos, pos, deltaPos, shiftKey, ctrlKey, altKey, null);
             this.propagate(element, mouseOver, e => e.dispatch('mouseover', mouseOver));
         }
+
+        this.m_window.cursor = element.style.cursor;
 
         const event = new MouseEvent(element, relPos, pos, deltaPos, shiftKey, ctrlKey, altKey, null);
         this.propagate(element, event, e => e.dispatch('mousemove', event));

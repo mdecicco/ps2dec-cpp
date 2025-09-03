@@ -1,6 +1,7 @@
 import * as React from 'mini-react';
 import { Window } from 'window';
 import { decompiler } from 'decompiler';
+import { vec2 } from 'math-ext';
 
 type WindowProps = {
     window: Window;
@@ -44,10 +45,10 @@ export const WindowProvider: React.FC<WindowProps> = props => {
     const { window } = props;
 
     React.useEffect(() => {
-        const sz = window.getSize();
-        const p = window.getPosition();
-        const open = window.isOpen();
-        const focused = window.isFocused();
+        const sz = window.size;
+        const p = window.position;
+        const open = window.isOpen;
+        const focused = window.isFocused;
 
         if (sz.x !== size.width || sz.y !== size.height) {
             setSize({ width: sz.x, height: sz.y });
@@ -65,45 +66,45 @@ export const WindowProvider: React.FC<WindowProps> = props => {
             setIsFocused(focused);
         }
 
-        const openListener = window.onOpen(() => {
+        const openListener = window.addListener('open', () => {
             setIsOpen(true);
             if (props.onOpen) props.onOpen();
         });
 
-        const closeListener = window.onClose(() => {
+        const closeListener = window.addListener('close', () => {
             setIsOpen(false);
             if (props.onClose) props.onClose();
         });
 
-        const focusListener = window.onFocus(() => {
+        const focusListener = window.addListener('focus', () => {
             setIsFocused(true);
             if (props.onFocus) props.onFocus();
         });
 
-        const blurListener = window.onBlur(() => {
+        const blurListener = window.addListener('blur', () => {
             setIsFocused(false);
             if (props.onBlur) props.onBlur();
         });
 
-        const resizeListener = window.onResize((width, height) => {
+        const resizeListener = window.addListener('resize', (width, height) => {
             setSize({ width, height });
             if (props.onResize) props.onResize(width, height);
         });
 
-        const moveListener = window.onMove((x, y) => {
+        const moveListener = window.addListener('move', (x, y) => {
             setPosition({ x, y });
             if (props.onMove) props.onMove(x, y);
         });
 
         return () => {
-            console.log(`Destroying window ${window.getTitle()}`);
+            console.log(`Destroying window ${window.title}`);
 
-            window.offOpen(openListener);
-            window.offClose(closeListener);
-            window.offFocus(focusListener);
-            window.offBlur(blurListener);
-            window.offResize(resizeListener);
-            window.offMove(moveListener);
+            openListener.remove();
+            closeListener.remove();
+            focusListener.remove();
+            blurListener.remove();
+            resizeListener.remove();
+            moveListener.remove();
 
             window.destroy();
         };
@@ -111,7 +112,7 @@ export const WindowProvider: React.FC<WindowProps> = props => {
 
     React.useEffect(() => {
         if (props.title) {
-            window.setTitle(props.title);
+            window.title = props.title;
         }
     }, [props.title]);
 
@@ -121,7 +122,7 @@ export const WindowProvider: React.FC<WindowProps> = props => {
             let newHeight = props.height ?? size.height;
 
             if (newWidth !== size.width || newHeight !== size.height) {
-                window.setSize(newWidth, newHeight);
+                window.size = new vec2(newWidth, newHeight);
             }
         }
     }, [props.width, props.height]);
@@ -132,75 +133,75 @@ export const WindowProvider: React.FC<WindowProps> = props => {
             let newY = props.y ?? position.y;
 
             if (newX !== position.x || newY !== position.y) {
-                window.setPosition(newX, newY);
+                window.position = new vec2(newX, newY);
             }
         }
     }, [props.x, props.y, position]);
 
     React.useEffect(() => {
         if (props.open === true && !isOpen) {
-            window.setOpen(true);
+            window.open();
         } else if (props.open === false && isOpen) {
-            window.setOpen(false);
+            window.close();
         }
     }, [isOpen, props.open]);
 
     React.useEffect(() => {
         if (props.onKeyDown && window) {
-            const listener = window.onKeyDown(props.onKeyDown);
+            const listener = window.addListener('keyDown', props.onKeyDown);
 
             return () => {
-                window.offKeyDown(listener);
+                listener.remove();
             };
         }
     }, [props.onKeyDown]);
 
     React.useEffect(() => {
         if (props.onKeyUp && window) {
-            const listener = window.onKeyUp(props.onKeyUp);
+            const listener = window.addListener('keyUp', props.onKeyUp);
 
             return () => {
-                window.offKeyUp(listener);
+                listener.remove();
             };
         }
     }, [props.onKeyUp]);
 
     React.useEffect(() => {
         if (props.onMouseMove && window) {
-            const listener = window.onMouseMove(props.onMouseMove);
+            const listener = window.addListener('mouseMove', props.onMouseMove);
 
             return () => {
-                window.offMouseMove(listener);
+                listener.remove();
             };
         }
     }, [props.onMouseMove]);
 
     React.useEffect(() => {
         if (props.onMouseDown && window) {
-            const listener = window.onMouseDown(props.onMouseDown);
+            const listener = window.addListener('mouseDown', props.onMouseDown);
 
             return () => {
-                window.offMouseDown(listener);
+                listener.remove();
             };
         }
     }, [props.onMouseDown]);
 
     React.useEffect(() => {
         if (props.onMouseUp && window) {
-            const listener = window.onMouseUp(props.onMouseUp);
+            const listener = window.addListener('mouseUp', props.onMouseUp);
 
             return () => {
-                window.offMouseUp(listener);
+                listener.remove();
             };
         }
     }, [props.onMouseUp]);
 
     React.useEffect(() => {
         if (props.onScroll && window) {
-            const listener = window.onScroll(props.onScroll);
+            const listener = window.addListener('scroll', props.onScroll);
 
             return () => {
-                window.offScroll(listener);
+                listener.remove();
             };
         }
     }, [props.onScroll]);

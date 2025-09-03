@@ -11,12 +11,11 @@ import {
     FlexWrap,
     FontStyle,
     JustifyContent,
-    Margin,
     Overflow,
-    Padding,
     ParsedStyleAttributes,
     Position,
     Size,
+    SizeInstruction,
     SizeUnit,
     TextAlign,
     TextDecoration,
@@ -26,7 +25,7 @@ import {
     WordWrap
 } from '../types/style';
 import { Direction } from '../types';
-import { DEFAULT_FONT_SIZE } from '../utils';
+import { FontManager } from '../utils/font-mgr';
 
 export class Style {
     private m_yogaNode: Yoga.YGNodeRef;
@@ -34,6 +33,7 @@ export class Style {
     private m_parent: Style | null;
     private m_root: Style | null;
     private m_clientRect: ClientRect;
+    private m_computedOpacity: number;
     private m_window: Window;
 
     constructor(
@@ -48,6 +48,7 @@ export class Style {
         this.m_parent = parent;
         this.m_root = root;
         this.m_window = window;
+        this.m_computedOpacity = 1;
         this.m_clientRect = {
             x: 0,
             y: 0,
@@ -652,6 +653,15 @@ export class Style {
         return this.m_styleData.textOverflow;
     }
 
+    set cursor(value: CursorIcon) {
+        if (value === this.m_styleData.cursor) return;
+        this.m_styleData.cursor = value;
+    }
+
+    get cursor() {
+        return this.m_styleData.cursor;
+    }
+
     set color(value: Color) {
         if (!isChanged(value, this.m_styleData.color)) return;
 
@@ -670,6 +680,19 @@ export class Style {
 
     get backgroundColor() {
         return this.m_styleData.backgroundColor;
+    }
+
+    set opacity(value: number) {
+        if (value === this.m_styleData.opacity) return;
+        this.m_styleData.opacity = value;
+    }
+
+    get opacity() {
+        return this.m_styleData.opacity;
+    }
+
+    get computedOpacity() {
+        return this.m_computedOpacity;
     }
 
     set borderWidth(value: Size) {
@@ -1035,76 +1058,172 @@ export class Style {
     }
 
     /** @internal */
-    resolveFontSize(size: Size): number {
+    resolveFontSize(size: Size, recursionLevel: number = 0): number {
+        let result: number;
+
         switch (size.unit) {
             case SizeUnit.px:
-                return size.value;
+                result = size.value;
+                break;
             case SizeUnit.percent:
-                if (!this.m_parent) return size.value * 0.01 * DEFAULT_FONT_SIZE;
-                return size.value * 0.01 * this.m_parent.resolveFontSize(this.m_parent.m_styleData.fontSize);
+                if (!this.m_parent) result = size.value * 0.01 * FontManager.defaultFontSize;
+                else result = size.value * 0.01 * this.m_parent.resolveFontSize(this.m_parent.m_styleData.fontSize);
+                break;
             case SizeUnit.em:
-                if (!this.m_parent) return size.value * DEFAULT_FONT_SIZE;
-                return size.value * this.m_parent.resolveFontSize(this.m_parent.m_styleData.fontSize);
+                if (!this.m_parent) result = size.value * FontManager.defaultFontSize;
+                else result = size.value * this.m_parent.resolveFontSize(this.m_parent.m_styleData.fontSize);
+                break;
             case SizeUnit.rem:
-                if (!this.m_root) return size.value * DEFAULT_FONT_SIZE;
-                return size.value * this.m_root.resolveFontSize(this.m_root.m_styleData.fontSize);
+                if (!this.m_root) result = size.value * FontManager.defaultFontSize;
+                else result = size.value * this.m_root.resolveFontSize(this.m_root.m_styleData.fontSize);
+                break;
             case SizeUnit.vw:
-                return size.value * 0.01 * this.m_window.getSize().x;
+                result = size.value * 0.01 * this.m_window.width;
+                break;
             case SizeUnit.vh:
-                return size.value * 0.01 * this.m_window.getSize().y;
+                result = size.value * 0.01 * this.m_window.height;
+                break;
         }
+
+        if (size.op) {
+            const rhs = this.resolveFontSize(size.op.value, recursionLevel + 1);
+            switch (size.op.instr) {
+                case SizeInstruction.Add:
+                    result += rhs;
+                    break;
+                case SizeInstruction.Sub:
+                    result -= rhs;
+                    break;
+                case SizeInstruction.Mul:
+                    result *= rhs;
+                    break;
+                case SizeInstruction.Div:
+                    result /= rhs;
+                    break;
+            }
+        }
+
+        return recursionLevel === 0 ? Math.round(result) : result;
     }
 
     /** @internal */
-    resolveSize(size: Size, axis: Direction): number {
+    resolveSize(size: Size, axis: Direction, recursionLevel: number = 0): number {
+        let result: number;
+
         switch (size.unit) {
             case SizeUnit.px:
-                return size.value;
+                result = size.value;
+                break;
             case SizeUnit.percent:
                 let percentOf: number;
                 if (!this.m_parent) {
-                    if (axis === Direction.Horizontal) percentOf = this.m_window.getSize().x;
-                    else percentOf = this.m_window.getSize().y;
+                    if (axis === Direction.Horizontal) percentOf = this.m_window.width;
+                    else percentOf = this.m_window.height;
                 } else {
                     if (axis === Direction.Horizontal) percentOf = this.m_parent.clientRect.width;
                     else percentOf = this.m_parent.clientRect.height;
                 }
 
-                return size.value * 0.01 * percentOf;
+                result = size.value * 0.01 * percentOf;
+                break;
             case SizeUnit.em:
-                return size.value * this.resolveFontSize(this.m_styleData.fontSize);
+                result = size.value * this.resolveFontSize(this.m_styleData.fontSize);
+                break;
             case SizeUnit.rem:
-                if (!this.m_root) return size.value * DEFAULT_FONT_SIZE;
-                return size.value * this.m_root.resolveFontSize(this.m_root.m_styleData.fontSize);
+                if (!this.m_root) result = size.value * FontManager.defaultFontSize;
+                else result = size.value * this.m_root.resolveFontSize(this.m_root.m_styleData.fontSize);
+                break;
             case SizeUnit.vw:
-                return size.value * 0.01 * this.m_window.getSize().x;
+                result = size.value * 0.01 * this.m_window.width;
+                break;
             case SizeUnit.vh:
-                return size.value * 0.01 * this.m_window.getSize().y;
+                result = size.value * 0.01 * this.m_window.height;
+                break;
         }
+
+        if (size.op) {
+            const rhs = this.resolveSize(size.op.value, axis, recursionLevel + 1);
+            switch (size.op.instr) {
+                case SizeInstruction.Add:
+                    result += rhs;
+                    break;
+                case SizeInstruction.Sub:
+                    result -= rhs;
+                    break;
+                case SizeInstruction.Mul:
+                    result *= rhs;
+                    break;
+                case SizeInstruction.Div:
+                    result /= rhs;
+                    break;
+            }
+        }
+
+        return recursionLevel === 0 ? Math.round(result) : result;
     }
 
     /** @internal */
-    resolveBorderRadius(size: Size, calculatedWidth: number, calculatedHeight: number, axis: Direction): number {
+    resolveBorderRadius(
+        size: Size,
+        calculatedWidth: number,
+        calculatedHeight: number,
+        axis: Direction,
+        recursionLevel: number = 0
+    ): number {
+        let result: number;
+
         switch (size.unit) {
             case SizeUnit.px:
-                return size.value;
+                result = size.value;
+                break;
             case SizeUnit.percent:
                 let percentOf: number;
 
                 if (axis === Direction.Horizontal) percentOf = calculatedWidth;
                 else percentOf = calculatedHeight;
 
-                return size.value * 0.01 * percentOf;
+                result = size.value * 0.01 * percentOf;
+                break;
             case SizeUnit.em:
-                return size.value * this.resolveFontSize(this.m_styleData.fontSize);
+                result = size.value * this.resolveFontSize(this.m_styleData.fontSize);
+                break;
             case SizeUnit.rem:
-                if (!this.m_root) return size.value * DEFAULT_FONT_SIZE;
-                return size.value * this.m_root.resolveFontSize(this.m_root.m_styleData.fontSize);
+                if (!this.m_root) result = size.value * FontManager.defaultFontSize;
+                else result = size.value * this.m_root.resolveFontSize(this.m_root.m_styleData.fontSize);
+                break;
             case SizeUnit.vw:
-                return size.value * 0.01 * this.m_window.getSize().x;
+                result = size.value * 0.01 * this.m_window.width;
+                break;
             case SizeUnit.vh:
-                return size.value * 0.01 * this.m_window.getSize().y;
+                result = size.value * 0.01 * this.m_window.height;
+                break;
         }
+
+        if (size.op) {
+            const rhs = this.resolveBorderRadius(
+                size.op.value,
+                calculatedWidth,
+                calculatedHeight,
+                axis,
+                recursionLevel + 1
+            );
+            switch (size.op.instr) {
+                case SizeInstruction.Add:
+                    result += rhs;
+                    break;
+                case SizeInstruction.Sub:
+                    result -= rhs;
+                    break;
+                case SizeInstruction.Mul:
+                    result *= rhs;
+                    break;
+                case SizeInstruction.Div:
+                    result /= rhs;
+                    break;
+            }
+        }
+
+        return recursionLevel === 0 ? Math.round(result) : result;
     }
 
     /** @internal */
@@ -1590,6 +1709,7 @@ export class Style {
         const marginTop = this.resolveSize(this.m_styleData.margin.top, Direction.Vertical);
         const marginBottom = this.resolveSize(this.m_styleData.margin.bottom, Direction.Vertical);
 
+        this.m_computedOpacity = this.m_styleData.opacity;
         this.m_clientRect = {
             x: left,
             y: top,
@@ -1615,7 +1735,11 @@ export class Style {
         };
 
         if (this.m_parent) {
-            switch (this.m_parent.m_styleData.position) {
+            this.m_computedOpacity *= this.m_parent.m_computedOpacity;
+        }
+
+        if (this.m_parent) {
+            switch (this.m_styleData.position) {
                 case Position.Static:
                 case Position.Relative:
                     const parentRect = this.m_parent.m_clientRect;

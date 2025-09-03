@@ -6,13 +6,14 @@ type Instance = {
     offsetX: f32;
     offsetY: f32;
     offsetZ: f32;
+    opacity: f32;
     clipRectIndex: i32;
 
     // used internally by the instance manager, not passed to the storage buffer
     isFreed: boolean;
 };
 
-const INSTANCE_SIZE = 4 * 4;
+const INSTANCE_SIZE = 32; // aligned to 16 bytes
 
 export class InstanceManager {
     private m_instances: Instance[];
@@ -23,6 +24,7 @@ export class InstanceManager {
                 offsetX: 0,
                 offsetY: 0,
                 offsetZ: 0,
+                opacity: 1,
                 clipRectIndex: -1,
                 isFreed: false
             }
@@ -38,6 +40,7 @@ export class InstanceManager {
             offsetX: 0,
             offsetY: 0,
             offsetZ: 0,
+            opacity: element.style.opacity,
             clipRectIndex: -1,
             isFreed: false
         };
@@ -90,7 +93,8 @@ export class InstanceManager {
             dataView.setFloat32(offset + 0, instance.offsetX, true);
             dataView.setFloat32(offset + 4, instance.offsetY, true);
             dataView.setFloat32(offset + 8, instance.offsetZ, true);
-            dataView.setInt32(offset + 12, instance.clipRectIndex, true);
+            dataView.setFloat32(offset + 12, instance.opacity, true);
+            dataView.setInt32(offset + 16, instance.clipRectIndex, true);
         }
 
         if (!buffer.map()) {

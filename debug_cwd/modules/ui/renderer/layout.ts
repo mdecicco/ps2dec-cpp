@@ -28,7 +28,7 @@ export class LayoutEngine extends IElementRecursion {
     execute() {
         if (!this.m_window.isOpen) return;
 
-        const windowSize = this.m_window.getSize();
+        const windowSize = this.m_window.size;
         this.m_root.style.width = px(windowSize.x);
         this.m_root.style.minWidth = px(windowSize.x);
         this.m_root.style.maxWidth = px(windowSize.x);

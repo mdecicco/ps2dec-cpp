@@ -14,6 +14,7 @@ import {
     ParsedStyleProps,
     Position,
     Size,
+    SizeInstruction,
     SizeUnit,
     StyleAttributes,
     StyleProps,
@@ -50,10 +51,67 @@ export class StyleParser {
         return this.m_string.substring(this.m_index);
     }
 
+    parseOpTail(expr: Size): boolean {
+        if (this.atEnd) return false;
+
+        const match = this.remainder.match(/^\s*([\+\-\*/])\s*/);
+        if (!match) return false;
+
+        const curIdx = this.m_index;
+        this.m_index += match[0].length;
+
+        const rhs = this.parseSize();
+        if (!rhs) {
+            this.m_index = curIdx;
+            return false;
+        }
+
+        const instr = match[1];
+        switch (instr) {
+            case '+':
+                expr.op = { instr: SizeInstruction.Add, value: rhs };
+                break;
+            case '-':
+                expr.op = { instr: SizeInstruction.Sub, value: rhs };
+                break;
+            case '*':
+                expr.op = { instr: SizeInstruction.Mul, value: rhs };
+                break;
+            case '/':
+                expr.op = { instr: SizeInstruction.Div, value: rhs };
+                break;
+            default:
+                this.m_index = curIdx;
+                return false;
+        }
+
+        return true;
+    }
+
+    parseCalculatedSize(): Size | null {
+        if (this.atEnd) return null;
+
+        const match = this.remainder.match(/^\s*calc\((.*)\)\s*/);
+        if (!match) return null;
+
+        const p = new StyleParser(match[1]);
+
+        const result = p.parseSize();
+        if (!result) return null;
+
+        if (!p.parseOpTail(result)) return null;
+
+        this.m_index += match[0].length;
+        return result;
+    }
+
     parseSize(): Size | null {
         if (this.atEnd) return null;
 
-        const match = this.remainder.match(/^\s*(-?\d+(?:\.\d+)?)(px|%|em|rem|vw|vh)\s*/);
+        const calculatedSize = this.parseCalculatedSize();
+        if (calculatedSize) return calculatedSize;
+
+        const match = this.remainder.match(/^\s*(-?\d+(?:\.\d+)?)(px|%|em|rem|vw|vh)?\s*/);
         if (!match) return null;
 
         const value = parseFloat(match[1]);
@@ -79,11 +137,12 @@ export class StyleParser {
                 unit = SizeUnit.vh;
                 break;
             default:
-                return null;
+                unit = SizeUnit.px;
+                break;
         }
 
         this.m_index += match[0].length;
-        return { value, unit };
+        return { value, unit, op: null };
     }
 
     parseWord(): string | null {
@@ -456,6 +515,43 @@ export class StyleParser {
         return null;
     }
 
+    parseCursor(): CursorIcon | null {
+        const word = this.parseWord();
+        if (!word) return null;
+
+        switch (word) {
+            case 'default':
+                return CursorIcon.Default;
+            case 'arrow':
+                return CursorIcon.Arrow;
+            case 'crosshair':
+                return CursorIcon.Crosshair;
+            case 'pointer':
+                return CursorIcon.Hand;
+            case 'i-beam':
+                return CursorIcon.IBeam;
+            case 'size-all':
+                return CursorIcon.SizeAll;
+            case 'size-nesw':
+                return CursorIcon.SizeNESW;
+            case 'size-ns':
+                return CursorIcon.SizeNS;
+            case 'size-nwse':
+                return CursorIcon.SizeNWSE;
+            case 'size-we':
+                return CursorIcon.SizeWE;
+            case 'up-arrow':
+                return CursorIcon.UpArrow;
+            case 'wait':
+                return CursorIcon.Wait;
+            case 'help':
+                return CursorIcon.Help;
+            default:
+        }
+
+        return null;
+    }
+
     parseBorder(current: Border) {
         const width = this.parseSize();
         if (!width) return;
@@ -554,29 +650,29 @@ export class StyleParser {
 
             parsedProps.border = {
                 top: {
-                    width: { value: 0, unit: SizeUnit.px },
+                    width: { value: 0, unit: SizeUnit.px, op: null },
                     style: BorderStyle.None,
                     color: { r: 0, g: 0, b: 0, a: 1 }
                 },
                 right: {
-                    width: { value: 0, unit: SizeUnit.px },
+                    width: { value: 0, unit: SizeUnit.px, op: null },
                     style: BorderStyle.None,
                     color: { r: 0, g: 0, b: 0, a: 1 }
                 },
                 bottom: {
-                    width: { value: 0, unit: SizeUnit.px },
+                    width: { value: 0, unit: SizeUnit.px, op: null },
                     style: BorderStyle.None,
                     color: { r: 0, g: 0, b: 0, a: 1 }
                 },
                 left: {
-                    width: { value: 0, unit: SizeUnit.px },
+                    width: { value: 0, unit: SizeUnit.px, op: null },
                     style: BorderStyle.None,
                     color: { r: 0, g: 0, b: 0, a: 1 }
                 },
-                topLeftRadius: { value: 0, unit: SizeUnit.px },
-                topRightRadius: { value: 0, unit: SizeUnit.px },
-                bottomLeftRadius: { value: 0, unit: SizeUnit.px },
-                bottomRightRadius: { value: 0, unit: SizeUnit.px }
+                topLeftRadius: { value: 0, unit: SizeUnit.px, op: null },
+                topRightRadius: { value: 0, unit: SizeUnit.px, op: null },
+                bottomLeftRadius: { value: 0, unit: SizeUnit.px, op: null },
+                bottomRightRadius: { value: 0, unit: SizeUnit.px, op: null }
             };
 
             return parsedProps.border;
@@ -586,10 +682,10 @@ export class StyleParser {
             if (parsedProps.padding) return parsedProps.padding;
 
             parsedProps.padding = {
-                left: { value: 0, unit: SizeUnit.px },
-                right: { value: 0, unit: SizeUnit.px },
-                top: { value: 0, unit: SizeUnit.px },
-                bottom: { value: 0, unit: SizeUnit.px }
+                left: { value: 0, unit: SizeUnit.px, op: null },
+                right: { value: 0, unit: SizeUnit.px, op: null },
+                top: { value: 0, unit: SizeUnit.px, op: null },
+                bottom: { value: 0, unit: SizeUnit.px, op: null }
             };
 
             return parsedProps.padding;
@@ -599,10 +695,10 @@ export class StyleParser {
             if (parsedProps.margin) return parsedProps.margin;
 
             parsedProps.margin = {
-                left: { value: 0, unit: SizeUnit.px },
-                right: { value: 0, unit: SizeUnit.px },
-                top: { value: 0, unit: SizeUnit.px },
-                bottom: { value: 0, unit: SizeUnit.px }
+                left: { value: 0, unit: SizeUnit.px, op: null },
+                right: { value: 0, unit: SizeUnit.px, op: null },
+                top: { value: 0, unit: SizeUnit.px, op: null },
+                bottom: { value: 0, unit: SizeUnit.px, op: null }
             };
 
             return parsedProps.margin;
@@ -619,13 +715,15 @@ export class StyleParser {
                 grow: 0,
                 shrink: 1,
                 basis: null,
-                gap: { value: 0, unit: SizeUnit.px }
+                gap: { value: 0, unit: SizeUnit.px, op: null }
             };
 
             return parsedProps.flex;
         };
 
         for (const key in props) {
+            if (props[key as keyof StyleProps] === undefined) continue;
+
             switch (key) {
                 case 'minWidth': {
                     if (props.minWidth!.trim() === 'auto') {
@@ -837,7 +935,7 @@ export class StyleParser {
                     const flex = ensureFlex();
                     flex.grow = props.flex!;
                     flex.shrink = props.flex!;
-                    flex.basis = { value: 0, unit: SizeUnit.px };
+                    flex.basis = { value: 0, unit: SizeUnit.px, op: null };
                     break;
                 }
                 case 'gap': {
@@ -945,6 +1043,14 @@ export class StyleParser {
                     parsedProps.textOverflow = textOverflow;
                     break;
                 }
+                case 'cursor': {
+                    const parser = new StyleParser(props.cursor!);
+                    const cursor = parser.parseCursor();
+                    if (cursor === null) break;
+
+                    parsedProps.cursor = cursor;
+                    break;
+                }
                 case 'color': {
                     const parser = new StyleParser(props.color!);
                     const color = parser.parseColor();
@@ -959,6 +1065,11 @@ export class StyleParser {
                     if (!backgroundColor) break;
 
                     parsedProps.backgroundColor = backgroundColor;
+                    break;
+                }
+                case 'opacity': {
+                    if (props.opacity! < 0 || props.opacity! > 1) break;
+                    parsedProps.opacity = props.opacity!;
                     break;
                 }
                 case 'border': {

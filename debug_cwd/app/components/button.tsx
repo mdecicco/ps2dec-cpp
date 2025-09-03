@@ -9,7 +9,7 @@ import { Theme } from '@app/types';
 
 type ButtonProps = BoxProps & {
     variant?: 'primary' | 'outline' | 'transparent';
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'xs' | 'sm' | 'md' | 'lg';
 };
 
 function getButtonTheme(theme: Theme, variant: ButtonProps['variant']) {
@@ -51,7 +51,6 @@ function getButtonTheme(theme: Theme, variant: ButtonProps['variant']) {
 }
 
 export const Button: React.FC<ButtonProps> = props => {
-    const { window } = useCurrentWindow();
     const theme = useTheme();
     const buttonTheme = React.useMemo(() => getButtonTheme(theme, props.variant), [theme, props.variant]);
     const [isHovered, setIsHovered] = React.useState(false);
@@ -83,6 +82,11 @@ export const Button: React.FC<ButtonProps> = props => {
 
     if (props.size) {
         switch (props.size) {
+            case 'xs':
+                pv = theme.spacing.xxs;
+                ph = theme.spacing.xs;
+                fontSize = theme.typography.size.sm;
+                break;
             case 'sm':
                 pv = theme.spacing.xs;
                 ph = theme.spacing.sm;
@@ -113,6 +117,7 @@ export const Button: React.FC<ButtonProps> = props => {
         paddingLeft: paddingHorizontal,
         paddingRight: paddingHorizontal,
         borderRadius: theme.borders.radius.sm,
+        cursor: 'pointer',
         ...style
     };
 
@@ -129,13 +134,11 @@ export const Button: React.FC<ButtonProps> = props => {
     const ownMouseEnter = (e: MouseEvent) => {
         setIsHovered(true);
         onMouseEnter?.(e);
-        window.setCursorIcon(CursorIcon.Hand);
     };
 
     const ownMouseLeave = (e: MouseEvent) => {
         setIsHovered(false);
         onMouseLeave?.(e);
-        window.setCursorIcon(CursorIcon.Default);
     };
 
     return (

@@ -144,3 +144,36 @@ export function useInterpolatedColor(
         { stop, onComplete: ownOnComplete, isAnimating }
     ];
 }
+
+type useInterpolatedNumberReturn = [
+    number,
+    (targetValue: number) => void,
+    {
+        stop: () => void;
+        onComplete: (callback: (finalValue: number) => void | null) => void;
+        isAnimating: boolean;
+    }
+];
+
+export function useInterpolatedNumber(
+    value: number,
+    duration: number,
+    easingMode: EasingMode = EasingMode.Linear
+): useInterpolatedNumberReturn {
+    const [v, setValue, { stop, onComplete, isAnimating }] = useInterpolatedState(value, {
+        duration,
+        easing: easingCallbacks[easingMode]
+    });
+
+    const ownOnComplete = (callback: (finalValue: number) => void | null) => {
+        onComplete(fv => {
+            callback?.(fv);
+        });
+    };
+
+    React.useEffect(() => {
+        setValue(value);
+    }, [value]);
+
+    return [v, setValue, { stop, onComplete: ownOnComplete, isAnimating }];
+}

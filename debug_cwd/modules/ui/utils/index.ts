@@ -6,11 +6,20 @@ export * from './font-mgr';
 export * from './vertex-array';
 export * from './instance-mgr';
 export * from './vulkan';
-
-import { Color, ParsedStyleAttributes, ParsedStyleProps, Size, SizeUnit, StyleAttributes, StyleProps } from '../types';
 import { StyleParser } from './parser';
+import { FontManager } from './font-mgr';
 
-export const DEFAULT_FONT_SIZE = 16;
+import { vec2 } from 'math-ext';
+import {
+    ClientRect,
+    Color,
+    ParsedStyleAttributes,
+    ParsedStyleProps,
+    Size,
+    SizeUnit,
+    StyleAttributes,
+    StyleProps
+} from '../types';
 
 export function defaultStyle(): StyleAttributes {
     return {
@@ -36,7 +45,7 @@ export function defaultStyle(): StyleAttributes {
         gap: '0px',
         lineHeight: '1.2em',
         letterSpacing: '0px',
-        fontSize: `${DEFAULT_FONT_SIZE}px`,
+        fontSize: `${FontManager.defaultFontSize}px`,
         fontWeight: 400,
         fontFamily: 'default',
         fontStyle: 'normal',
@@ -47,8 +56,10 @@ export function defaultStyle(): StyleAttributes {
         wordWrap: 'normal',
         overflow: 'visible',
         textOverflow: 'clip',
+        cursor: 'default',
         color: 'rgba(0, 0, 0, 1)',
         backgroundColor: 'rgba(0, 0, 0, 0)',
+        opacity: 1,
         borderTopWidth: '0px',
         borderTopColor: 'rgba(0, 0, 0, 1)',
         borderTopStyle: 'none',
@@ -76,8 +87,9 @@ export function defaultStyle(): StyleAttributes {
     };
 }
 
-const immutableDefaultStyle = Object.freeze(defaultStyle());
-const parsedDefaultStyle = Object.freeze(StyleParser.parseStyleProps(immutableDefaultStyle));
+// font size -> default style
+const defaultStyleMap: Record<number, { props: StyleAttributes; parsed: ParsedStyleAttributes }> = {};
+
 const cascadingStyleProps = new Set<keyof ParsedStyleAttributes>([
     'lineHeight',
     'letterSpacing',
@@ -91,6 +103,7 @@ const cascadingStyleProps = new Set<keyof ParsedStyleAttributes>([
     'wordBreak',
     'wordWrap',
     'textOverflow',
+    'cursor',
     'color'
 ]);
 
@@ -113,19 +126,31 @@ export function mergeStyle(parent: ParsedStyleProps, child: ParsedStyleProps): P
 }
 
 export function getCompleteStyle(parentStyle?: ParsedStyleProps, childStyle?: ParsedStyleProps): ParsedStyleAttributes {
+    let defaults: { props: StyleProps; parsed: ParsedStyleAttributes } | null = null;
+    if (FontManager.defaultFontSize in defaultStyleMap) {
+        defaults = defaultStyleMap[FontManager.defaultFontSize];
+    } else {
+        const immutableDefaultStyle = Object.freeze(defaultStyle());
+        const parsedDefaultStyle = Object.freeze(StyleParser.parseStyleProps(immutableDefaultStyle));
+        defaults = defaultStyleMap[FontManager.defaultFontSize] = {
+            props: immutableDefaultStyle,
+            parsed: parsedDefaultStyle
+        };
+    }
+
     let result: ParsedStyleProps;
 
     if (childStyle) {
         if (parentStyle) {
-            result = mergeStyle(parsedDefaultStyle, mergeStyle(parentStyle, childStyle));
-        } else result = mergeStyle(parsedDefaultStyle, childStyle);
+            result = mergeStyle(defaults.parsed, mergeStyle(parentStyle, childStyle));
+        } else result = mergeStyle(defaults.parsed, childStyle);
     } else if (parentStyle) {
-        result = mergeStyle(parsedDefaultStyle, parentStyle);
-    } else return parsedDefaultStyle;
+        result = mergeStyle(defaults.parsed, parentStyle);
+    } else return defaults.parsed;
 
-    for (const key in parsedDefaultStyle) {
+    for (const key in defaults.parsed) {
         if (!(key in result)) {
-            (result as any)[key] = (parsedDefaultStyle as any)[key];
+            (result as any)[key] = (defaults.parsed as any)[key];
         }
     }
 
@@ -133,27 +158,27 @@ export function getCompleteStyle(parentStyle?: ParsedStyleProps, childStyle?: Pa
 }
 
 export function px(value: number): Size {
-    return { unit: SizeUnit.px, value };
+    return { unit: SizeUnit.px, value, op: null };
 }
 
 export function percent(value: number): Size {
-    return { unit: SizeUnit.percent, value };
+    return { unit: SizeUnit.percent, value, op: null };
 }
 
 export function em(value: number): Size {
-    return { unit: SizeUnit.em, value };
+    return { unit: SizeUnit.em, value, op: null };
 }
 
 export function rem(value: number): Size {
-    return { unit: SizeUnit.rem, value };
+    return { unit: SizeUnit.rem, value, op: null };
 }
 
 export function vw(value: number): Size {
-    return { unit: SizeUnit.vw, value };
+    return { unit: SizeUnit.vw, value, op: null };
 }
 
 export function vh(value: number): Size {
-    return { unit: SizeUnit.vh, value };
+    return { unit: SizeUnit.vh, value, op: null };
 }
 
 export function rgb(r: number, g: number, b: number): Color {
@@ -169,4 +194,38 @@ export function parseColor(value: string): Color {
     const color = parser.parseColor();
     if (!color) throw new Error(`Invalid color: ${value}`);
     return color;
+}
+
+export function pointInClientRect(pos: vec2, rect: ClientRect): boolean {
+    if (pos.x < rect.left || pos.x > rect.right) return false;
+    if (pos.y < rect.top || pos.y > rect.bottom) return false;
+
+    const inTopLeft = pos.x < rect.left + rect.topLeftRadius && pos.y < rect.top + rect.topLeftRadius;
+    const inTopRight = pos.x > rect.right - rect.topRightRadius && pos.y < rect.top + rect.topRightRadius;
+    const inBottomRight = pos.x > rect.right - rect.bottomRightRadius && pos.y > rect.bottom - rect.bottomRightRadius;
+    const inBottomLeft = pos.x < rect.left + rect.bottomLeftRadius && pos.y > rect.bottom - rect.bottomLeftRadius;
+
+    if (inTopLeft && rect.topLeftRadius > 0.0) {
+        const center = new vec2(rect.left + rect.topLeftRadius, rect.top + rect.topLeftRadius);
+        const diff = new vec2();
+        vec2.sub(diff, pos, center);
+        if (diff.lengthSq > rect.topLeftRadius * rect.topLeftRadius) return false;
+    } else if (inTopRight && rect.topRightRadius > 0.0) {
+        const center = new vec2(rect.right - rect.topRightRadius, rect.top + rect.topRightRadius);
+        const diff = new vec2();
+        vec2.sub(diff, pos, center);
+        if (diff.lengthSq > rect.topRightRadius * rect.topRightRadius) return false;
+    } else if (inBottomRight && rect.bottomRightRadius > 0.0) {
+        const center = new vec2(rect.right - rect.bottomRightRadius, rect.bottom - rect.bottomRightRadius);
+        const diff = new vec2();
+        vec2.sub(diff, pos, center);
+        if (diff.lengthSq > rect.bottomRightRadius * rect.bottomRightRadius) return false;
+    } else if (inBottomLeft && rect.bottomLeftRadius > 0.0) {
+        const center = new vec2(rect.left + rect.bottomLeftRadius, rect.bottom - rect.bottomLeftRadius);
+        const diff = new vec2();
+        vec2.sub(diff, pos, center);
+        if (diff.lengthSq > rect.bottomLeftRadius * rect.bottomLeftRadius) return false;
+    }
+
+    return true;
 }

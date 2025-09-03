@@ -12,11 +12,13 @@ const baseTokens = {
         }
     },
     spacing: {
+        xxs: '0.06rem',
         xs: '0.12rem',
         sm: '0.24rem',
         md: '0.48rem',
         lg: '0.96rem',
-        xl: '1.92rem'
+        xl: '1.92rem',
+        xxl: '3.84rem'
     },
     borders: {
         width: {
@@ -47,16 +49,25 @@ export const darkTheme: Theme = {
 
         // Neutral colors
         background: 'rgb(24, 18, 7)',
-        surface: 'rgb(27, 15, 6)',
+        surface: 'rgb(70, 48, 31)',
         text: 'rgb(214, 214, 214)',
         textSecondary: 'rgb(145, 145, 145)',
-        border: 'rgb(70, 56, 41)',
+        border: 'rgba(255, 255, 255, 0.38)',
 
         // State colors
         success: 'rgb(90, 187, 106)',
         warning: 'rgb(168, 185, 90)',
         error: 'rgb(189, 90, 90)',
         info: 'rgb(96, 187, 194)'
+    },
+    durations: {
+        short: 125,
+        medium: 250,
+        long: 500
+    },
+    highlights: {
+        hover: 0.25,
+        pressed: 0.45
     }
 };
 
