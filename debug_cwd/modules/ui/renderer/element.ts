@@ -11,6 +11,7 @@ import { Overflow, ParsedStyleAttributes, WhiteSpace } from '../types/style';
 import { TextNode } from '../types/text-node';
 import { UINode } from '../types/ui-node';
 import { BoxNode } from '../types/box-node';
+import { RootNode } from '../types/root-node';
 import { GeometryNode } from '../types/geometry-node';
 import type { BoxProps, GeometryProps } from '../types/elements';
 import {
@@ -24,7 +25,7 @@ import {
 } from '../types/geometry';
 
 import { Style } from './style';
-import { getCompleteStyle, FontManager, VertexArray, pointInClientRect } from '../utils';
+import { getCompleteStyle, FontManager, VertexArray, pointInClientRect, DepthManager } from '../utils';
 import { buildBoxGeometry } from '../utils/box-geometry';
 
 type ElementEvents = {
@@ -60,6 +61,7 @@ type RendererState = {
 
 export class Element extends EventProducer<ElementEvents> {
     /** @internal */ private m_treeNode: TreeNode;
+    /** @internal */ private m_treeDepth: number;
     /** @internal */ private m_window: Window;
     /** @internal */ private m_source: UINode;
     /** @internal */ private m_root: Element | null;
@@ -67,6 +69,7 @@ export class Element extends EventProducer<ElementEvents> {
     /** @internal */ private m_children: Element[];
     /** @internal */ private m_yogaNode: Yoga.YGNodeRef;
     /** @internal */ private m_fontManager: FontManager;
+    /** @internal */ private m_depthMgr: DepthManager;
     /** @internal */ private m_geometry: Geometry | null;
     /** @internal */ private m_scrollOffset: vec2;
     /** @internal */ private m_contentSize: vec2;
@@ -80,7 +83,8 @@ export class Element extends EventProducer<ElementEvents> {
         source: UINode,
         root: Element | null,
         parent: Element | null,
-        fontManager: FontManager
+        fontManager: FontManager,
+        depthMgr: DepthManager
     ) {
         super();
 
@@ -88,10 +92,12 @@ export class Element extends EventProducer<ElementEvents> {
         this.m_source = source;
         this.m_root = root;
         this.m_treeNode = source.node;
+        this.m_treeDepth = source.treeDepth;
         this.m_parent = parent;
         this.m_children = [];
         this.m_yogaNode = Yoga.YGNodeNew();
         this.m_fontManager = fontManager;
+        this.m_depthMgr = depthMgr;
         this.m_geometry = null;
         this.m_scrollOffset = new vec2();
         this.m_contentSize = new vec2();
@@ -101,7 +107,8 @@ export class Element extends EventProducer<ElementEvents> {
             this.m_styleProps,
             this.m_parent ? this.m_parent.m_style : null,
             this.m_root ? this.m_root.m_style : null,
-            this.m_window
+            this.m_window,
+            this.m_depthMgr
         );
         this.m_rendererState = {
             isHovered: false,
@@ -263,6 +270,11 @@ export class Element extends EventProducer<ElementEvents> {
     /** @internal */
     get treeNode() {
         return this.m_treeNode;
+    }
+
+    /** @internal */
+    get treeDepth() {
+        return this.m_treeDepth;
     }
 
     /** @internal */
@@ -492,6 +504,43 @@ export class Element extends EventProducer<ElementEvents> {
                 this.m_treeNode.root.enqueueForRender(this.m_treeNode);
             }
         });
+    }
+
+    /** @internal */
+    debugPrint(indentation: number = 0) {
+        console.log(`${' '.repeat(indentation)}${this}`);
+        for (const child of this.m_children) {
+            child.debugPrint(indentation + 2);
+        }
+    }
+
+    toString() {
+        const clientRect = this.m_style.clientRect;
+        const depth = this.m_depthMgr.getDepthValue(this.m_style.zIndex, this.m_treeDepth);
+        const x = clientRect.x.toFixed(4);
+        const y = clientRect.y.toFixed(4);
+        const z = depth.toFixed(4);
+        const w = clientRect.width.toFixed(4);
+        const h = clientRect.height.toFixed(4);
+        const after = `(x: ${x}, y: ${y}, z: ${z}, w: ${w}, h: ${h})`;
+
+        if (this.m_source instanceof BoxNode) {
+            const clientRect = this.m_style.clientRect;
+            return `Box ${after}`;
+        } else if (this.m_source instanceof GeometryNode) {
+            const geometry = this.m_geometry as CustomGeometry;
+            return `Geometry ${after}`;
+        } else if (this.m_source instanceof TextNode) {
+            let text = this.m_source.text;
+            if (text.length > 8) {
+                text = text.slice(0, 5) + '...';
+            }
+            return `Text '${text}' ${after}`;
+        } else if (this.m_source instanceof RootNode) {
+            return `Root ${after}`;
+        }
+
+        return `Element (${this.m_source.node.displayName})`;
     }
 
     /** @internal */
@@ -731,6 +780,7 @@ export class Element extends EventProducer<ElementEvents> {
 
     /** @internal */
     static __internal_unmount(element: Element) {
+        element.m_depthMgr.onZIndexRemoved(element.m_style.zIndex);
         Yoga.YGNodeSetMeasureFunc(element.m_yogaNode, null);
         Yoga.YGNodeFree(element.m_yogaNode);
     }

@@ -10,6 +10,7 @@ import { RootNode } from './types/root-node';
 import { GeometryNode } from './types/geometry-node';
 import { FontFamilyOptions, FontManager } from './utils/font-mgr';
 import { Element } from './renderer/element';
+import { DepthManager } from './utils/depth-mgr';
 
 export * from './components';
 export { StyleProps, StyleAttributes, ParsedStyleProps, ParsedStyleAttributes } from './types';
@@ -18,6 +19,7 @@ export class UIRoot extends ReactRoot {
     /** @internal */ private m_root: UINode | null;
     /** @internal */ private m_nodeStack: UINode[];
     /** @internal */ private m_fontMgr: FontManager;
+    /** @internal */ private m_depthMgr: DepthManager;
     /** @internal */ private m_renderer: UIRenderer;
     /** @internal */ private m_isShutdown: boolean;
 
@@ -28,7 +30,8 @@ export class UIRoot extends ReactRoot {
         this.m_root = null;
         this.m_nodeStack = [];
         this.m_fontMgr = new FontManager();
-        this.m_renderer = new UIRenderer(window, this.m_fontMgr);
+        this.m_depthMgr = new DepthManager();
+        this.m_renderer = new UIRenderer(window, this.m_fontMgr, this.m_depthMgr);
         this.m_isShutdown = false;
     }
 
@@ -36,6 +39,11 @@ export class UIRoot extends ReactRoot {
     get mostRecentNode() {
         if (this.m_nodeStack.length === 0) return null;
         return this.m_nodeStack[this.m_nodeStack.length - 1];
+    }
+
+    /** @internal */
+    get depthMgr() {
+        return this.m_depthMgr;
     }
 
     /** @internal */
@@ -50,17 +58,18 @@ export class UIRoot extends ReactRoot {
     }
 
     /** @internal */
-    private parseNode(inputNode: TreeNode) {
+    private parseNode(inputNode: TreeNode, treeDepth: number) {
         const props = inputNode.props;
+        this.m_depthMgr.currentTreeDepth = treeDepth;
 
         let node: UINode | null = null;
 
         if (React.isSpecificElement(inputNode.type, Box, props)) {
-            node = new BoxNode(inputNode, this.mostRecentNode, props);
+            node = new BoxNode(inputNode, treeDepth, this.mostRecentNode, props);
         } else if (React.isSpecificElement(inputNode.type, Geometry, props)) {
-            node = new GeometryNode(inputNode, this.mostRecentNode, props);
+            node = new GeometryNode(inputNode, treeDepth, this.mostRecentNode, props);
         } else if (React.isSpecificElement(inputNode.type, TextFragment, props)) {
-            node = new TextNode(inputNode, this.mostRecentNode);
+            node = new TextNode(inputNode, treeDepth, this.mostRecentNode);
         } else if (!this.m_root) {
             node = new RootNode(inputNode);
         }
@@ -72,7 +81,7 @@ export class UIRoot extends ReactRoot {
         }
 
         for (const child of inputNode.children) {
-            this.parseNode(child);
+            this.parseNode(child, treeDepth + 1);
         }
 
         if (node) this.endProcessingNode(node);
@@ -94,7 +103,8 @@ export class UIRoot extends ReactRoot {
     onAfterRender(rootNode: TreeNode) {
         if (this.m_isShutdown) return;
         this.m_root = null;
-        this.parseNode(rootNode);
+        this.m_depthMgr.maxTreeDepth = 0;
+        this.parseNode(rootNode, 0);
         this.renderToWindow();
     }
 

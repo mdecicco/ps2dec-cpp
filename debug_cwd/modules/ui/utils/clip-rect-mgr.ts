@@ -33,8 +33,7 @@ export class ClipRectManager {
                 marginLeft: 0,
                 marginRight: 0,
                 marginTop: 0,
-                marginBottom: 0,
-                depth: 0
+                marginBottom: 0
             }
         ];
         this.m_clipRectIndexStack = [0];
@@ -77,8 +76,7 @@ export class ClipRectManager {
                 marginLeft: 0,
                 marginRight: 0,
                 marginTop: 0,
-                marginBottom: 0,
-                depth: 0
+                marginBottom: 0
             }
         ];
         this.m_clipRectIndexStack = [0];

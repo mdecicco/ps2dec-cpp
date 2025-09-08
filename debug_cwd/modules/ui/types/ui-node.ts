@@ -6,14 +6,16 @@ import { StyleParser } from '../utils/parser';
 /** @internal */
 export abstract class UINode {
     /** @internal */ private m_node: TreeNode;
+    /** @internal */ private m_treeDepth: number;
     /** @internal */ private m_parent: UINode | null;
     /** @internal */ private m_children: UINode[];
     /** @internal */ private m_props: ElementProps;
     /** @internal */ private m_style: ParsedStyleProps;
 
     /** @internal */
-    constructor(node: TreeNode, parent: UINode | null, props?: ElementProps) {
+    constructor(node: TreeNode, treeDepth: number, parent: UINode | null, props?: ElementProps) {
         this.m_node = node;
+        this.m_treeDepth = treeDepth;
         this.m_parent = parent;
         this.m_children = [];
         this.m_props = props ?? {};
@@ -23,6 +25,10 @@ export abstract class UINode {
     /** @internal */
     get node() {
         return this.m_node;
+    }
+
+    get treeDepth() {
+        return this.m_treeDepth;
     }
 
     get parent() {
@@ -63,4 +69,6 @@ export abstract class UINode {
             child.debugPrint(indentation + 4);
         }
     }
+
+    abstract toString(): string;
 }

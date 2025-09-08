@@ -5,7 +5,11 @@ import { GeometryProps } from './elements';
 /** @internal */
 export class GeometryNode extends UINode {
     /** @internal */
-    constructor(node: TreeNode, parent: UINode | null, props?: GeometryProps) {
-        super(node, parent, props);
+    constructor(node: TreeNode, treeDepth: number, parent: UINode | null, props?: GeometryProps) {
+        super(node, treeDepth, parent, props);
+    }
+
+    toString() {
+        return `GeometryNode`;
     }
 }

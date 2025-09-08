@@ -115,7 +115,7 @@ export function ortho(
 
     out.z.x = 0;
     out.z.y = 0;
-    out.z.z = -2 / d;
+    out.z.z = -1 / d;
     out.z.w = (far + near) / d;
 
     out.w.x = 0;

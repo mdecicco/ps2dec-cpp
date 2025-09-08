@@ -864,15 +864,8 @@ export class StyleParser {
                     break;
                 }
                 case 'zIndex': {
-                    if (props.zIndex!.trim() === 'auto') {
-                        parsedProps.zIndex = null;
-                        break;
-                    }
-
-                    const zIndex = parseFloat(props.zIndex!);
-                    if (isNaN(zIndex) || zIndex < 0 || zIndex !== Math.floor(zIndex)) break;
-
-                    parsedProps.zIndex = zIndex;
+                    if (props.zIndex! < 0) break;
+                    parsedProps.zIndex = props.zIndex!;
                     break;
                 }
                 case 'flexDirection': {

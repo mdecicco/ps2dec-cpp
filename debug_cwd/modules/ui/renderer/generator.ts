@@ -2,21 +2,28 @@ import { Window } from 'window';
 import { UINode } from '../types/ui-node';
 import { Element } from './element';
 import { IElementRecursion } from './tree-recurse';
-import { FontManager, InstanceManager } from '../utils';
+import { DepthManager, FontManager, InstanceManager } from '../utils';
 
 export class TreeGenerator extends IElementRecursion {
     private m_window: Window;
     private m_root: Element | null;
     private m_createdElements: Element[];
     private m_fontManager: FontManager;
+    private m_depthManager: DepthManager;
     private m_instanceManager: InstanceManager;
 
-    constructor(window: Window, fontManager: FontManager, instanceManager: InstanceManager) {
+    constructor(
+        window: Window,
+        fontManager: FontManager,
+        depthManager: DepthManager,
+        instanceManager: InstanceManager
+    ) {
         super();
         this.m_window = window;
         this.m_root = null;
         this.m_createdElements = [];
         this.m_fontManager = fontManager;
+        this.m_depthManager = depthManager;
         this.m_instanceManager = instanceManager;
     }
 
@@ -40,7 +47,14 @@ export class TreeGenerator extends IElementRecursion {
         }
 
         if (!selfElement) {
-            selfElement = new Element(this.m_window, src, this.m_root, currentElement, this.m_fontManager);
+            selfElement = new Element(
+                this.m_window,
+                src,
+                this.m_root,
+                currentElement,
+                this.m_fontManager,
+                this.m_depthManager
+            );
             this.m_createdElements.push(selfElement);
 
             if (!this.m_root) {

@@ -3,6 +3,7 @@ export * from './render-context';
 export * from './draw-call';
 export * from './text-draw';
 export * from './font-mgr';
+export * from './depth-mgr';
 export * from './vertex-array';
 export * from './instance-mgr';
 export * from './vulkan';
@@ -34,7 +35,7 @@ export function defaultStyle(): StyleAttributes {
         right: 'auto',
         bottom: 'auto',
         left: 'auto',
-        zIndex: 'auto',
+        zIndex: 0,
         flexDirection: 'row',
         justifyContent: 'flex-start',
         alignItems: 'flex-start',
@@ -104,6 +105,7 @@ const cascadingStyleProps = new Set<keyof ParsedStyleAttributes>([
     'wordWrap',
     'textOverflow',
     'cursor',
+    'zIndex',
     'color'
 ]);
 

@@ -126,6 +126,7 @@ export class TreeNode extends EventProducer<TreeNodeEvents> {
 
     private onUnmount() {
         this.dispatch('unmount', this);
+        this.m_root.onNodeUnmount(this);
         this.m_children.forEach(child => child.onUnmount());
         this.m_isMounted = false;
         this.m_isDirty = false;
@@ -193,6 +194,11 @@ export class TreeNode extends EventProducer<TreeNodeEvents> {
         if (this.m_isMounted && !this.m_isDirty && compareProps(this.m_props, props)) {
             return;
         }
+
+        // Rerender all children
+        this.m_children.forEach(child => {
+            child.m_isDirty = true;
+        });
 
         TreeNode.s_nodeStack.push(this);
 
@@ -380,6 +386,7 @@ export class ReactRoot {
         this.m_isRendering = true;
 
         rerenderQueue.forEach(node => {
+            if (!node.isMounted) return;
             node.render(node.props);
         });
 
@@ -406,6 +413,11 @@ export class ReactRoot {
         if (this.m_renderQueue.length === 0) {
             this.onAfterRender(this.m_rootNode);
         }
+    }
+
+    /** @internal */
+    onNodeUnmount(node: TreeNode) {
+        this.m_renderQueue = this.m_renderQueue.filter(n => n !== node);
     }
 
     /** @internal */

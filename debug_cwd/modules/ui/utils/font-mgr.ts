@@ -252,7 +252,7 @@ export class FontFamily {
     ) {
         if (!this.m_atlas) return;
 
-        const z = 0.1;
+        const z = 0;
         const { x, y, width, height, u0, v0, u1, v1, isWhitespace } = glyphRect;
 
         if (isWhitespace) return;

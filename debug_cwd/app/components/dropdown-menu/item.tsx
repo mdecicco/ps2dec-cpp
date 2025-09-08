@@ -1,19 +1,22 @@
 import * as React from 'mini-react';
-import { Box, BoxProps, StyleProps } from 'ui';
+import { Box, BoxProps, StyleProps, MouseEvent } from 'ui';
+import { EasingMode, useInterpolatedNumber } from 'hooks';
 
 import { useTheme } from '@app/contexts';
-import { MouseEvent } from 'ui';
-import { EasingMode, useInterpolatedNumber } from 'hooks';
+import { useDropdownMenuContext } from './context';
 
 type DropdownMenuItemProps = BoxProps & {
     prefix?: React.ReactNode;
     suffix?: React.ReactNode;
     tip?: string;
+    noCloseBehavior?: boolean;
 };
 
 export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = props => {
-    const { style, children, prefix, suffix, tip, onMouseEnter, onMouseLeave, ...rest } = props;
+    const { style, children, prefix, suffix, tip, onMouseEnter, onMouseLeave, onClick, noCloseBehavior, ...rest } =
+        props;
     const theme = useTheme();
+    const { closeMenu } = useDropdownMenuContext();
 
     const [backgroundOpacity, setBackgroundOpacity] = useInterpolatedNumber(
         0,
@@ -29,6 +32,11 @@ export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = props => {
     const ownMouseLeave = (e: MouseEvent) => {
         setBackgroundOpacity(0);
         onMouseLeave?.(e);
+    };
+
+    const ownClick = (e: MouseEvent) => {
+        onClick?.(e);
+        if (!noCloseBehavior) closeMenu();
     };
 
     const itemStyle: StyleProps = {
@@ -59,7 +67,7 @@ export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = props => {
     };
 
     return (
-        <Box style={itemStyle} onMouseEnter={ownMouseEnter} onMouseLeave={ownMouseLeave} {...rest}>
+        <Box style={itemStyle} onMouseEnter={ownMouseEnter} onMouseLeave={ownMouseLeave} onClick={ownClick} {...rest}>
             <Box style={prefixPostfixStyle}>{prefix}</Box>
             <Box style={childrenStyle}>{children}</Box>
             <Box

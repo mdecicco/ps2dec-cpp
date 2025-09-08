@@ -5,7 +5,11 @@ import { BoxProps } from './elements';
 /** @internal */
 export class BoxNode extends UINode {
     /** @internal */
-    constructor(node: TreeNode, parent: UINode | null, props?: BoxProps) {
-        super(node, parent, props);
+    constructor(node: TreeNode, treeDepth: number, parent: UINode | null, props?: BoxProps) {
+        super(node, treeDepth, parent, props);
+    }
+
+    toString() {
+        return `BoxNode`;
     }
 }

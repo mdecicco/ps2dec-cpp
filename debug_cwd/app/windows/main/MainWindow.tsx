@@ -10,11 +10,36 @@ import {
     DropdownMenuTrigger,
     Icon,
     Separator,
-    Toolbar
+    TabbedView,
+    TabView,
+    Toolbar,
+    PopoverDirection
 } from '@app/components';
 import { FaCheck, FaChevronRight, FaFile, FaFloppyDisk } from 'font-awesome-solid';
 import { useTheme } from '@app/contexts';
 import { decompiler } from 'decompiler';
+
+const Submenu: React.FC = () => {
+    const theme = useTheme();
+    return (
+        <DropdownMenu
+            offsetX={`calc(${theme.spacing.sm} * 2)`}
+            offsetY={`calc(${theme.spacing.sm} * -1.5)`}
+            direction={PopoverDirection.Right}
+        >
+            <DropdownMenuTrigger>
+                <DropdownMenuItem suffix={<Icon icon={FaChevronRight} />} noCloseBehavior>
+                    Submenu
+                </DropdownMenuItem>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                <DropdownMenuItem>Submenu Item 1</DropdownMenuItem>
+                <DropdownMenuItem>Submenu Item 2</DropdownMenuItem>
+                <DropdownMenuItem>Submenu Item 3</DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+};
 
 export const MainWindow: WindowComponent = () => {
     const theme = useTheme();
@@ -36,7 +61,7 @@ export const MainWindow: WindowComponent = () => {
                         </DropdownMenuItem>
                         <Separator />
                         <DropdownMenuItem prefix={<Icon icon={FaCheck} />}>I'm Checked</DropdownMenuItem>
-                        <DropdownMenuItem suffix={<Icon icon={FaChevronRight} />}>Submenu</DropdownMenuItem>
+                        <Submenu />
                         <Separator />
                         <DropdownMenuItem
                             tip='CTRL+Q'
@@ -49,6 +74,11 @@ export const MainWindow: WindowComponent = () => {
                     </DropdownMenuContent>
                 </DropdownMenu>
             </Toolbar>
+            <TabbedView style={{ flexGrow: 1, width: '100%' }}>
+                <TabView label='Tab 1'>Tab 1</TabView>
+                <TabView label='Tab 2'>Tab 2</TabView>
+                <TabView label='Tab 3'>Tab 3</TabView>
+            </TabbedView>
         </Background>
     );
 };

@@ -14,6 +14,10 @@ export class RootNode extends UINode {
             height: '100%'
         };
 
-        super(node, null, { style });
+        super(node, 0, null, { style });
+    }
+
+    toString() {
+        return `RootNode (${this.node.displayName})`;
     }
 }

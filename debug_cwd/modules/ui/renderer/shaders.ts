@@ -30,7 +30,12 @@ layout(location = 3) out vec2 v_pos;
 void main() {
     Instance instance = instances[instanceIdx];
     vec3 offset = instance.offset;
-    vec4 pos = vec4(position.x + offset.x, position.y + offset.y, position.z + offset.z, 1.0);
+    vec4 pos = vec4(
+        position.x + offset.x,
+        position.y + offset.y,
+        position.z + offset.z,
+        1.0
+    );
     gl_Position = mvp * pos;
     v_color = color;
     v_uv = uv;

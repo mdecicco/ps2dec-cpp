@@ -55,8 +55,4 @@ export class TextDraw {
     resetUsedVertices() {
         this.m_drawCall.resetUsedVertices();
     }
-
-    drawText(geometry: TextGeometry) {
-        this.m_drawCall.addVertices(geometry.vertices);
-    }
 }

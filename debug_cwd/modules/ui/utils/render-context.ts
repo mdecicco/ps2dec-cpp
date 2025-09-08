@@ -252,6 +252,9 @@ export class RenderContext {
         this.m_graphicsPipeline.addSampler(3, VkShaderStageFlags.VK_SHADER_STAGE_FRAGMENT_BIT);
         this.m_graphicsPipeline.addDynamicState(VkDynamicState.VK_DYNAMIC_STATE_VIEWPORT);
         this.m_graphicsPipeline.addDynamicState(VkDynamicState.VK_DYNAMIC_STATE_SCISSOR);
+        this.m_graphicsPipeline.setDepthTestEnabled(true);
+        this.m_graphicsPipeline.setDepthCompareOp(Render.CompareOp.GreaterOrEqual);
+        this.m_graphicsPipeline.setDepthWriteEnabled(true);
         this.m_graphicsPipeline.setColorBlendEnabled(true);
         this.m_graphicsPipeline.setColorBlendOp(Render.BlendOp.Add);
         this.m_graphicsPipeline.setAlphaBlendOp(Render.BlendOp.Add);
@@ -532,7 +535,7 @@ export class RenderContext {
         cb.beginRenderPass(graphicsPipeline, this.m_currentFrame.getFramebuffer());
         cb.bindPipeline(graphicsPipeline, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS);
         this.m_currentFrame.setClearColorF(0, new vec4f(0, 0, 0, 1));
-        this.m_currentFrame.setClearDepthStencil(1, 1.0, 0);
+        this.m_currentFrame.setClearDepthStencil(1, 0.0, 0);
         cb.setViewport(0, windowSize.height, windowSize.width, -windowSize.height, 0, 1);
         cb.setScissor(0, 0, windowSize.width, windowSize.height);
 

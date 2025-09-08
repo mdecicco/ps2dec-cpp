@@ -1,5 +1,6 @@
 import { Window } from 'window';
-import { mat4, Transform, vec2, vec4 } from 'math-ext';
+import { mat4, Transform } from 'math-ext';
+import { EventListener } from 'event';
 
 import { TreeGenerator } from './generator';
 import { LayoutEngine } from './layout';
@@ -13,15 +14,15 @@ import {
     BoxNode,
     TextNode,
     GeometryNode,
-    Vertex,
     TextGeometry,
     BoxGeometry,
     Overflow,
     CustomGeometry
 } from '../types';
 import { FontFamily, FontManager } from '../utils/font-mgr';
+import { DepthManager } from '../utils/depth-mgr';
 import { UIEventManager } from '../utils/event-mgr';
-import { EventListener } from 'event';
+import { VertexArray } from '../utils/vertex-array';
 
 function clipRectsIntersect(a: ClientRect, b: ClientRect): boolean {
     if (b.x + b.width < a.x || b.x > a.x + a.width) return false;
@@ -33,6 +34,7 @@ function clipRectsIntersect(a: ClientRect, b: ClientRect): boolean {
 export class UIRenderer {
     private m_window: Window;
     private m_fontMgr: FontManager;
+    private m_depthMgr: DepthManager;
     private m_eventMgr: UIEventManager;
     private m_renderContext: RenderContext;
     private m_treeGenerator: TreeGenerator;
@@ -41,17 +43,20 @@ export class UIRenderer {
     private m_boxDraw: DrawCall | null;
     private m_windowSize: { width: u32; height: u32 };
     private m_textDraws: Map<FontFamily, TextDraw>;
+    private m_draws: { drawCall: DrawCall; vertices: VertexArray; depth: f32 }[];
 
-    constructor(window: Window, fontMgr: FontManager) {
+    constructor(window: Window, fontMgr: FontManager, depthMgr: DepthManager) {
         this.m_window = window;
         this.m_fontMgr = fontMgr;
+        this.m_depthMgr = depthMgr;
         this.m_eventMgr = new UIEventManager(window);
         this.m_renderContext = new RenderContext(window);
-        this.m_treeGenerator = new TreeGenerator(window, fontMgr, this.m_renderContext.instances);
+        this.m_treeGenerator = new TreeGenerator(window, fontMgr, depthMgr, this.m_renderContext.instances);
         this.m_lastTree = null;
         this.m_resizeListener = null;
         this.m_boxDraw = null;
         this.m_textDraws = new Map<FontFamily, TextDraw>();
+        this.m_draws = [];
 
         const windowSize = window.size;
         this.m_windowSize = { width: windowSize.x, height: windowSize.y };
@@ -140,15 +145,22 @@ export class UIRenderer {
 
             const { x, y } = node.style.clientRect;
 
+            const depth = this.m_depthMgr.getDepthValue(node.style.zIndex, node.treeDepth);
+
             this.m_renderContext.instances.updateInstance(node, {
                 offsetX: x + offsetX,
                 offsetY: y + offsetY,
-                offsetZ: 0,
+                offsetZ: depth,
                 opacity: node.style.computedOpacity,
                 clipRectIndex: clipRectIndex
             });
 
-            textDraw.drawText(geometry);
+            // textDraw.drawCall.addVertices(geometry.vertices);
+            this.m_draws.push({
+                drawCall: textDraw.drawCall,
+                vertices: geometry.vertices,
+                depth
+            });
         }
     }
 
@@ -164,15 +176,22 @@ export class UIRenderer {
             offsetY = -offset.y;
         }
 
+        const depth = this.m_depthMgr.getDepthValue(node.style.zIndex, node.treeDepth);
+
         this.m_renderContext.instances.updateInstance(node, {
             offsetX: geometry.offsetPosition.x + offsetX,
             offsetY: geometry.offsetPosition.y + offsetY,
-            offsetZ: geometry.offsetPosition.z,
+            offsetZ: geometry.offsetPosition.z + depth,
             opacity: node.style.computedOpacity,
             clipRectIndex: clipRectIndex
         });
 
-        this.m_boxDraw!.addVertices(vertices);
+        // this.m_boxDraw!.addVertices(vertices);
+        this.m_draws.push({
+            drawCall: this.m_boxDraw!,
+            vertices: vertices,
+            depth
+        });
     }
 
     private drawCustom(node: Element, geometry: CustomGeometry, clipRectIndex: u32) {
@@ -188,15 +207,22 @@ export class UIRenderer {
             offsetY = -offset.y;
         }
 
+        const depth = this.m_depthMgr.getDepthValue(node.style.zIndex, node.treeDepth);
+
         this.m_renderContext.instances.updateInstance(node, {
             offsetX: geometry.offsetPosition.x + x + offsetX,
             offsetY: geometry.offsetPosition.y + y + offsetY,
-            offsetZ: geometry.offsetPosition.z,
+            offsetZ: geometry.offsetPosition.z + depth,
             opacity: node.style.computedOpacity,
             clipRectIndex: clipRectIndex
         });
 
-        this.m_boxDraw!.addVertices(vertices);
+        // this.m_boxDraw!.addVertices(vertices);
+        this.m_draws.push({
+            drawCall: this.m_boxDraw!,
+            vertices: vertices,
+            depth
+        });
     }
 
     private drawNode(node: Element) {
@@ -243,6 +269,9 @@ export class UIRenderer {
         let end = Date.now();
         // console.debug(`Layout time: ${end - start}ms`);
 
+        // console.log('begin render ----------------------------------------');
+        // this.m_lastTree.debugPrint();
+
         start = Date.now();
         if (this.m_renderContext.begin()) {
             this.m_renderContext.clipRects.reset();
@@ -250,7 +279,15 @@ export class UIRenderer {
             for (const textDraw of this.m_textDraws.values()) {
                 textDraw.resetUsedVertices();
             }
+
+            this.m_draws = [];
             this.drawNode(this.m_lastTree);
+
+            // sort draws by depth
+            this.m_draws.sort((a, b) => b.depth - a.depth);
+            for (const draw of this.m_draws) {
+                draw.drawCall.addVertices(draw.vertices);
+            }
 
             this.m_renderContext.beginRenderPass();
             this.m_renderContext.endRenderPass();

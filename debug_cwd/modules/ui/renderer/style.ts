@@ -26,6 +26,7 @@ import {
 } from '../types/style';
 import { Direction } from '../types';
 import { FontManager } from '../utils/font-mgr';
+import { DepthManager } from '../utils/depth-mgr';
 
 export class Style {
     private m_yogaNode: Yoga.YGNodeRef;
@@ -35,19 +36,22 @@ export class Style {
     private m_clientRect: ClientRect;
     private m_computedOpacity: number;
     private m_window: Window;
+    private m_depthMgr: DepthManager;
 
     constructor(
         yogaNode: Yoga.YGNodeRef,
         styleData: ParsedStyleAttributes,
         parent: Style | null,
         root: Style | null,
-        window: Window
+        window: Window,
+        depthMgr: DepthManager
     ) {
         this.m_yogaNode = yogaNode;
         this.m_styleData = styleData;
         this.m_parent = parent;
         this.m_root = root;
         this.m_window = window;
+        this.m_depthMgr = depthMgr;
         this.m_computedOpacity = 1;
         this.m_clientRect = {
             x: 0,
@@ -69,11 +73,11 @@ export class Style {
             marginLeft: 0,
             marginRight: 0,
             marginTop: 0,
-            marginBottom: 0,
-            depth: 0
+            marginBottom: 0
         };
 
         this.configureYogaNode();
+        this.m_depthMgr.onZIndexAdded(this.m_styleData.zIndex);
     }
 
     get clientRect() {
@@ -327,9 +331,9 @@ export class Style {
         return this.m_styleData.left;
     }
 
-    set zIndex(value: number | null) {
+    set zIndex(value: number) {
         if (value === this.m_styleData.zIndex) return;
-
+        this.m_depthMgr.onZIndexChanged(this.m_styleData.zIndex, value);
         this.m_styleData.zIndex = value;
     }
 
@@ -1730,8 +1734,7 @@ export class Style {
             marginLeft,
             marginRight,
             marginTop,
-            marginBottom,
-            depth: 0
+            marginBottom
         };
 
         if (this.m_parent) {

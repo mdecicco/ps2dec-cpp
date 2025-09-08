@@ -3,9 +3,14 @@ import { BoxProps, StyleProps } from 'ui';
 
 import { Popover, PopoverContent, PopoverProps, PopoverTrigger } from '@app/components/popover';
 import { useTheme } from '@app/contexts';
-import { DropdownMenuContent } from './content';
 
-type DropdownMenuProps = PopoverProps & {};
+import { DropdownMenuContent } from './content';
+import { DropdownMenuProvider } from './context';
+
+type DropdownMenuProps = PopoverProps & {
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+};
 
 export const DropdownMenuTrigger: React.FC = props => {
     return props.children;
@@ -13,7 +18,18 @@ export const DropdownMenuTrigger: React.FC = props => {
 
 export const DropdownMenu: React.FC<DropdownMenuProps> = props => {
     const theme = useTheme();
-    const { children, ...rest } = props;
+    const { children, open, onOpenChange, ...rest } = props;
+    const [isOpen, setIsOpen] = React.useState(false);
+
+    React.useEffect(() => {
+        if (open === undefined || open === isOpen) return;
+        setIsOpen(open ?? false);
+    }, [open]);
+
+    React.useEffect(() => {
+        if (onOpenChange === undefined) return;
+        onOpenChange(isOpen);
+    }, [isOpen, onOpenChange]);
 
     const childrenArray = React.flattenChildren(props.children);
     let trigger: React.ReactElement | null = null;
@@ -47,12 +63,16 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = props => {
         flexDirection: 'column'
     };
 
+    const close = React.useMemo(() => () => setIsOpen(false));
+
     return (
-        <Popover {...rest}>
-            <PopoverTrigger>{trigger}</PopoverTrigger>
-            <PopoverContent style={contentStyle} {...contentRest}>
-                {content}
-            </PopoverContent>
-        </Popover>
+        <DropdownMenuProvider closeMenu={close}>
+            <Popover open={isOpen} onOpenChange={setIsOpen} {...rest}>
+                <PopoverTrigger>{trigger}</PopoverTrigger>
+                <PopoverContent style={contentStyle} {...contentRest}>
+                    {content}
+                </PopoverContent>
+            </Popover>
+        </DropdownMenuProvider>
     );
 };

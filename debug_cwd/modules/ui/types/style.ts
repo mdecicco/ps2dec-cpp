@@ -10,7 +10,7 @@ export type StyleAttributes = {
     right: string;
     bottom: string;
     left: string;
-    zIndex: string;
+    zIndex: number;
     flexDirection: 'row' | 'column';
     justifyContent: 'flex-start' | 'flex-end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
     alignItems: 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline';
@@ -283,8 +283,7 @@ export type ParsedStyleAttributes = {
     bottom: Size | null;
     /** null means auto */
     left: Size | null;
-    /** null means auto */
-    zIndex: number | null;
+    zIndex: number;
     flex: Flex;
     lineHeight: Size;
     letterSpacing: Size;
@@ -351,11 +350,4 @@ export type ClientRect = {
     marginTop: number;
     /** The width of the element's bottom margin in pixels */
     marginBottom: number;
-    /**
-     * The depth of the element in the z-axis, higher values are
-     * closer to the viewer.
-     *
-     * @note This is not the same as the z-index property.
-     */
-    depth: number;
 };

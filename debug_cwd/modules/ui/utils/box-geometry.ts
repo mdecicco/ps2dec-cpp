@@ -137,7 +137,7 @@ function buildBoxScrollGeometry(rect: ClientRect, instanceIdx: u32, inoutGeometr
         buildBoxGeometryInternal({
             x: verticalScrollBarHandleBox.x,
             y: verticalScrollBarHandleBox.y,
-            z: rect.depth,
+            z: 0,
             width: verticalScrollBarHandleBox.width,
             height: verticalScrollBarHandleBox.height,
             color,
@@ -177,7 +177,7 @@ function buildBoxScrollGeometry(rect: ClientRect, instanceIdx: u32, inoutGeometr
         buildBoxGeometryInternal({
             x: horizontalScrollBarHandleBox.x,
             y: horizontalScrollBarHandleBox.y,
-            z: rect.depth,
+            z: 0,
             width: horizontalScrollBarHandleBox.width,
             height: horizontalScrollBarHandleBox.height,
             color,
@@ -1316,7 +1316,7 @@ export function buildBoxGeometry(properties: BoxProperties, instanceIdx: u32): B
     buildBoxGeometryInternal({
         x: rect.x,
         y: rect.y,
-        z: rect.depth,
+        z: 0,
         width: rect.width,
         height: rect.height,
         color: properties.color,
