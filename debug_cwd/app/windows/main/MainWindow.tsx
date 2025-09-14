@@ -1,18 +1,17 @@
 import * as React from 'mini-react';
-import { Box } from 'ui';
 
 import { WindowComponent } from '@app/windows/types';
-import { Background, WorkspaceNavigator } from '@app/components';
+import { Background, Flex, WorkspaceNavigator } from '@app/components';
 import { MainToolbar } from './MainToolbar';
 
 export const MainWindow: WindowComponent = () => {
     return (
-        <Background style={{ flexDirection: 'column' }}>
+        <Background fd='column'>
             <MainToolbar />
-            <Box style={{ flexDirection: 'row', flexGrow: 1, width: '100%' }}>
+            <Flex fd='row' grow={1} w='100%'>
                 <WorkspaceNavigator />
-                <Box style={{ flexDirection: 'column', flexGrow: 1, height: '100%' }}></Box>
-            </Box>
+                <Flex fd='column' grow={1} h='100%'></Flex>
+            </Flex>
         </Background>
     );
 };
