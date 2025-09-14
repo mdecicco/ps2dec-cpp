@@ -240,7 +240,11 @@ export class Element extends EventProducer<ElementEvents> {
                 }
 
                 const previousGeometry = this.m_geometry as TextGeometry | null;
-                if (!previousGeometry || isChanged(textProperties, previousGeometry.textProperties)) {
+                if (
+                    !previousGeometry ||
+                    previousGeometry.text !== this.m_source.text ||
+                    isChanged(textProperties, previousGeometry.textProperties)
+                ) {
                     const start = Date.now();
                     this.m_geometry = fontFamily.createTextGeometry(
                         this.m_source.text,
@@ -705,10 +709,10 @@ export class Element extends EventProducer<ElementEvents> {
         if (element.m_source instanceof TextNode) {
             const geometry = element.m_geometry as TextGeometry | null;
             if (geometry) {
-                element.m_style.clientRect.width = geometry.width;
-                element.m_style.clientRect.height = geometry.height;
-                element.m_style.clientRect.right = element.m_style.clientRect.left + geometry.width;
-                element.m_style.clientRect.bottom = element.m_style.clientRect.top + geometry.height;
+                element.m_style.clientRect.width = Math.round(geometry.width);
+                element.m_style.clientRect.height = Math.round(geometry.height);
+                element.m_style.clientRect.right = Math.round(element.m_style.clientRect.left + geometry.width);
+                element.m_style.clientRect.bottom = Math.round(element.m_style.clientRect.top + geometry.height);
             }
         }
 
