@@ -8,4 +8,5 @@ export * from './icon';
 export * from './tabbed-view';
 export * from './close-button';
 export * from './pane';
+export * from './workspace-navigator';
 export * from './flex';
