@@ -3,7 +3,7 @@ import type { KeyboardEvent, MouseEvent, ResizeEvent, ScrollEvent, UIEvent, Whee
 import type { StyleProps } from './style';
 import type { Element } from '../renderer/element';
 
-export type ElementRef = React.Ref<Element | null> | ((element: Element | null) => void);
+export type ElementRef = React.Ref<Element | null>;
 
 export type ElementBaseProps = {
     ref?: ElementRef;
