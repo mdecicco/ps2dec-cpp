@@ -1671,10 +1671,10 @@ export class Style {
 
     /** @internal */
     readLayout() {
-        const left = Yoga.YGNodeLayoutGetLeft(this.m_yogaNode);
-        const top = Yoga.YGNodeLayoutGetTop(this.m_yogaNode);
-        const width = Yoga.YGNodeLayoutGetWidth(this.m_yogaNode);
-        const height = Yoga.YGNodeLayoutGetHeight(this.m_yogaNode);
+        const left = Math.round(Yoga.YGNodeLayoutGetLeft(this.m_yogaNode));
+        const top = Math.round(Yoga.YGNodeLayoutGetTop(this.m_yogaNode));
+        const width = Math.round(Yoga.YGNodeLayoutGetWidth(this.m_yogaNode));
+        const height = Math.round(Yoga.YGNodeLayoutGetHeight(this.m_yogaNode));
 
         const topLeftRadius = this.resolveBorderRadius(
             this.m_styleData.border.topLeftRadius,
@@ -1752,6 +1752,28 @@ export class Style {
                     this.m_clientRect.top += parentRect.y;
                     this.m_clientRect.right += parentRect.x;
                     this.m_clientRect.bottom += parentRect.y;
+                    break;
+                case Position.Absolute:
+                    let relativeTo: Style | null = null;
+                    let n: Style | null = this.m_parent;
+                    while (n && !relativeTo) {
+                        if (n.m_styleData.position !== Position.Static) {
+                            relativeTo = n;
+                            break;
+                        }
+
+                        n = n.m_parent;
+                    }
+
+                    if (relativeTo) {
+                        const relativeToRect = relativeTo.m_clientRect;
+                        this.m_clientRect.x += relativeToRect.x;
+                        this.m_clientRect.y += relativeToRect.y;
+                        this.m_clientRect.left += relativeToRect.x;
+                        this.m_clientRect.top += relativeToRect.y;
+                        this.m_clientRect.right += relativeToRect.x;
+                        this.m_clientRect.bottom += relativeToRect.y;
+                    }
                     break;
                 default:
                     break;
