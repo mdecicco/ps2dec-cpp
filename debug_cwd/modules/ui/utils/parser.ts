@@ -568,6 +568,58 @@ export class StyleParser {
         current.left = { width, style, color };
     }
 
+    parseBorderTop(current: Border) {
+        const width = this.parseSize();
+        if (!width) return;
+
+        const style = this.parseBorderStyle();
+        if (!style) return;
+
+        const color = this.parseColor();
+        if (!color) return;
+
+        current.top = { width, style, color };
+    }
+
+    parseBorderRight(current: Border) {
+        const width = this.parseSize();
+        if (!width) return;
+
+        const style = this.parseBorderStyle();
+        if (!style) return;
+
+        const color = this.parseColor();
+        if (!color) return;
+
+        current.right = { width, style, color };
+    }
+
+    parseBorderBottom(current: Border) {
+        const width = this.parseSize();
+        if (!width) return;
+
+        const style = this.parseBorderStyle();
+        if (!style) return;
+
+        const color = this.parseColor();
+        if (!color) return;
+
+        current.bottom = { width, style, color };
+    }
+
+    parseBorderLeft(current: Border) {
+        const width = this.parseSize();
+        if (!width) return;
+
+        const style = this.parseBorderStyle();
+        if (!style) return;
+
+        const color = this.parseColor();
+        if (!color) return;
+
+        current.left = { width, style, color };
+    }
+
     parsePadding(current: Padding) {
         const sizes: Size[] = [];
         for (let i = 0; i < 4; i++) {
@@ -1068,6 +1120,26 @@ export class StyleParser {
                 case 'border': {
                     const parser = new StyleParser(props.border!);
                     parser.parseBorder(ensureBorder());
+                    break;
+                }
+                case 'borderTop': {
+                    const parser = new StyleParser(props.borderTop!);
+                    parser.parseBorderTop(ensureBorder());
+                    break;
+                }
+                case 'borderRight': {
+                    const parser = new StyleParser(props.borderRight!);
+                    parser.parseBorderRight(ensureBorder());
+                    break;
+                }
+                case 'borderBottom': {
+                    const parser = new StyleParser(props.borderBottom!);
+                    parser.parseBorderBottom(ensureBorder());
+                    break;
+                }
+                case 'borderLeft': {
+                    const parser = new StyleParser(props.borderLeft!);
+                    parser.parseBorderLeft(ensureBorder());
                     break;
                 }
                 case 'borderWidth': {

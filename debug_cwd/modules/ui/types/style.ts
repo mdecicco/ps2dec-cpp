@@ -78,6 +78,10 @@ export type StyleAttributes = {
 export type ShorthandStyleAttributes = {
     flex: number;
     border: string;
+    borderTop: string;
+    borderRight: string;
+    borderBottom: string;
+    borderLeft: string;
     padding: string;
     margin: string;
     borderRadius: string;
