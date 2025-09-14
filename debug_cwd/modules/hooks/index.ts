@@ -6,3 +6,5 @@ export * from './use-root-elem';
 export * from './use-depth-layer';
 export * from './use-mount-effect';
 export * from './use-optional-controlled-state';
+export * from './use-combine-refs';
+export * from './use-inject-ref';
