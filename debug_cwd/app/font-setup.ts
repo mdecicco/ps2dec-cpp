@@ -27,7 +27,9 @@ export function setupFonts(root: UIRoot) {
             Icons.FaChevronRight,
             Icons.FaChevronLeft,
             Icons.FaFile,
-            Icons.FaFloppyDisk
+            Icons.FaFloppyDisk,
+            Icons.FaFileImport,
+            Icons.FaXmark
         ]
     });
 }
