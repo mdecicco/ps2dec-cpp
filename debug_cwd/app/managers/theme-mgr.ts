@@ -1,7 +1,7 @@
 import { EventProducer } from 'event';
 
 import { Theme } from '@app/types';
-import { defaultTheme, darkTheme, availableThemes } from '@app/themes/default-themes';
+import { defaultTheme, availableThemes } from '@app/themes/default-themes';
 
 type ThemeEvents = {
     themeChanged: (newTheme: Theme) => void;
