@@ -46,37 +46,6 @@ using namespace render::utils;
 using namespace tspp::builtin::databuffer;
 
 namespace decomp {
-    void extendWindowInterface() {
-        bind::ObjectTypeBuilder<Window> b = bind::extend<Window>();
-        b.baseType<IWithLogging>();
-
-        tspp::describe(b.method("getInstance", &Window::getInstance)).desc("Get the instance of the window");
-        tspp::describe(b.method("getPhysicalDevice", &Window::getPhysicalDevice))
-            .desc("Get the physical device of the window");
-        tspp::describe(b.method("getLogicalDevice", &Window::getLogicalDevice))
-            .desc("Get the logical device of the window");
-        tspp::describe(b.method("getSurface", &Window::getSurface)).desc("Get the surface of the window");
-        tspp::describe(b.method("getSwapChain", &Window::getSwapChain)).desc("Get the swap chain of the window");
-        tspp::describe(b.method("getRenderPass", &Window::getRenderPass)).desc("Get the render pass of the window");
-        tspp::describe(b.method("getShaderCompiler", &Window::getShaderCompiler))
-            .desc("Get the shader compiler of the window");
-        tspp::describe(b.method("getDebugDraw", &Window::getDebugDraw)).desc("Get the debug drawer of the window");
-        tspp::describe(b.method("getFrameManager", &Window::getFrameManager))
-            .desc("Get the frame manager of the window");
-        tspp::describe(b.method("allocateVertices", &Window::allocateVertices))
-            .desc("Allocate a set of vertices")
-            .param(0, "format", "The format of the vertices")
-            .param(1, "count", "The number of vertices to allocate");
-        tspp::describe(b.method("allocateUniformObject", &Window::allocateUniformObject))
-            .desc("Allocate a uniform object")
-            .param(0, "format", "The format of the uniform object");
-        tspp::describe(b.method("allocateDescriptor", &Window::allocateDescriptor))
-            .desc("Allocate a descriptor")
-            .param(0, "pipeline", "The pipeline to allocate the descriptor for");
-        tspp::describe(b.method("getFrame", &Window::getFrame)).desc("Get a frame to use for rendering");
-        tspp::describe(b.method("releaseFrame", &Window::releaseFrame)).desc("Release a frame after use");
-    }
-
     void bindEnumTypes(bind::Namespace* ns) {
         {
             bind::EnumTypeBuilder<Axis> b = ns->type<Axis>("Axis");
@@ -1499,7 +1468,5 @@ namespace decomp {
         bindFrameManagerInterface();
 
         bindDebugDrawInterface();
-
-        extendWindowInterface();
     }
 }
