@@ -1,13 +1,13 @@
 import * as React from 'mini-react';
-import { Box, StyleProps } from 'ui';
-import { useCurrentWindow } from 'components';
-
-import { BoxProps, MouseEvent } from 'ui/types';
+import { StyleProps } from 'ui';
+import { MouseEvent } from 'ui/types';
 import { EasingMode, useInterpolatedColor, useInterpolatedSize } from 'hooks';
+
 import { useTheme } from '@app/contexts';
 import { Theme } from '@app/types';
+import { Flex, FlexProps } from '@app/components/flex';
 
-type ButtonProps = BoxProps & {
+type ButtonProps = FlexProps & {
     variant?: 'primary' | 'outline' | 'transparent';
     size?: 'xs' | 'sm' | 'md' | 'lg';
 };
@@ -85,7 +85,7 @@ export const Button: React.FC<ButtonProps> = props => {
             case 'xs':
                 pv = theme.spacing.xxs;
                 ph = theme.spacing.xs;
-                fontSize = theme.typography.size.sm;
+                fontSize = theme.typography.size.xs;
                 break;
             case 'sm':
                 pv = theme.spacing.xs;
@@ -98,8 +98,8 @@ export const Button: React.FC<ButtonProps> = props => {
                 fontSize = theme.typography.size.md;
                 break;
             case 'lg':
-                pv = theme.spacing.lg;
-                ph = theme.spacing.xl;
+                pv = theme.spacing.sm;
+                ph = theme.spacing.md;
                 fontSize = theme.typography.size.lg;
                 break;
         }
@@ -117,6 +117,7 @@ export const Button: React.FC<ButtonProps> = props => {
         paddingLeft: paddingHorizontal,
         paddingRight: paddingHorizontal,
         borderRadius: theme.borders.radius.sm,
+        fontSize,
         cursor: 'pointer',
         ...style
     };
@@ -142,7 +143,7 @@ export const Button: React.FC<ButtonProps> = props => {
     };
 
     return (
-        <Box
+        <Flex
             style={ownStyle}
             onMouseDown={ownMouseDown}
             onMouseUp={ownMouseUp}
@@ -151,6 +152,6 @@ export const Button: React.FC<ButtonProps> = props => {
             {...rest}
         >
             {children}
-        </Box>
+        </Flex>
     );
 };

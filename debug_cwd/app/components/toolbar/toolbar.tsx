@@ -1,29 +1,28 @@
 import * as React from 'mini-react';
-import { Box, BoxProps, StyleProps } from 'ui';
+import { StyleProps } from 'ui';
 
 import { useTheme } from '@app/contexts';
+import { FlexProps, Flex } from '@app/components/flex';
 
-type ToolbarProps = BoxProps & {};
+type ToolbarProps = FlexProps & {};
 
 export const Toolbar: React.FC<ToolbarProps> = props => {
     const { style, children, ...rest } = props;
     const theme = useTheme();
 
     const mergedStyle: StyleProps = {
-        backgroundColor: theme.colors.surface,
+        backgroundColor: theme.colors.background,
         width: '100%',
         padding: theme.spacing.sm,
-        borderBottomColor: theme.colors.border,
-        borderBottomWidth: '1px',
-        borderBottomStyle: 'solid',
+        borderBottom: `1px solid ${theme.colors.border}`,
         flexDirection: 'row',
         gap: theme.spacing.sm,
         ...style
     };
 
     return (
-        <Box style={mergedStyle} {...rest}>
+        <Flex style={mergedStyle} {...rest}>
             {children}
-        </Box>
+        </Flex>
     );
 };

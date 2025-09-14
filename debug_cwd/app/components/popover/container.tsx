@@ -1,19 +1,15 @@
 import { useDepthLayer } from 'hooks';
 import * as React from 'mini-react';
-import { Box, BoxProps, StyleProps } from 'ui';
 
-export const PopoverContainer: React.FC<BoxProps> = props => {
+import { Flex, FlexProps } from '@app/components/flex';
+
+export const PopoverContainer: React.FC<FlexProps> = props => {
     const depthLayer = useDepthLayer();
     const { style, children, ...rest } = props;
 
-    const styleProps: StyleProps = {
-        ...style,
-        zIndex: depthLayer
-    };
-
     return (
-        <Box style={styleProps} {...rest}>
+        <Flex style={{ ...style, zIndex: depthLayer }} {...rest}>
             {children}
-        </Box>
+        </Flex>
     );
 };

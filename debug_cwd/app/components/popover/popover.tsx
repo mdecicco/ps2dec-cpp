@@ -7,9 +7,10 @@ import {
 } from 'hooks';
 import { EventListener } from 'event';
 import * as React from 'mini-react';
-import { BoxProps, Element, StyleProps } from 'ui';
+import { Element, StyleProps } from 'ui';
 
 import { useTheme } from '@app/contexts';
+import { FlexProps } from '@app/components/flex';
 
 import { PopoverContainer } from './container';
 
@@ -17,7 +18,7 @@ export const PopoverTrigger: React.FC = props => {
     return props.children;
 };
 
-export const PopoverContent: React.FC<Omit<BoxProps, 'ref'>> = props => {
+export const PopoverContent: React.FC<Omit<FlexProps, 'ref'>> = props => {
     return props.children;
 };
 
@@ -65,7 +66,7 @@ export const Popover: React.FC<PopoverProps> = props => {
     const childrenArray = React.flattenChildren(props.children);
     let trigger: React.ReactElement | null = null;
     let content: React.ReactNode | null = null;
-    let contentProps: BoxProps = {};
+    let contentProps: FlexProps = {};
 
     for (const child of childrenArray) {
         if (!React.isReactElement(child)) continue;
@@ -80,7 +81,7 @@ export const Popover: React.FC<PopoverProps> = props => {
 
             const triggerChildProps = triggerChild.props as any;
 
-            trigger = React.cloneElement<BoxProps>(triggerChild, {
+            trigger = React.cloneElement<FlexProps>(triggerChild, {
                 ref: triggerRef,
                 onClick: e => {
                     setIsOpen(true);
@@ -90,7 +91,7 @@ export const Popover: React.FC<PopoverProps> = props => {
             });
         } else if (child.type === PopoverContent) {
             content = child;
-            contentProps = child.props as BoxProps;
+            contentProps = child.props as FlexProps;
         }
     }
 

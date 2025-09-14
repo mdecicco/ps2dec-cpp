@@ -1,20 +1,39 @@
 import * as React from 'mini-react';
-import { Box, BoxProps, StyleProps, MouseEvent } from 'ui';
+import { Box, StyleProps, MouseEvent } from 'ui';
 import { EasingMode, useInterpolatedNumber } from 'hooks';
 
-import { useTheme } from '@app/contexts';
+import { Hotkey, useTheme, getHotkeyString } from '@app/contexts';
 import { useDropdownMenuContext } from './context';
+import { Flex, FlexProps } from '@app/components/flex';
+import { extractStyleProps } from '@app/utils';
 
-type DropdownMenuItemProps = BoxProps & {
+export type DropdownMenuItemProps = FlexProps & {
     prefix?: React.ReactNode;
     suffix?: React.ReactNode;
     tip?: string;
     noCloseBehavior?: boolean;
+    disabled?: boolean;
+    hotkey?: Hotkey;
+    onSelect?: () => void;
 };
 
 export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = props => {
-    const { style, children, prefix, suffix, tip, onMouseEnter, onMouseLeave, onClick, noCloseBehavior, ...rest } =
-        props;
+    const {
+        style,
+        children,
+        prefix,
+        suffix,
+        tip,
+        hotkey,
+        noCloseBehavior,
+        disabled,
+        onMouseEnter,
+        onMouseLeave,
+        onClick,
+        onSelect,
+        ...rest
+    } = props;
+
     const theme = useTheme();
     const { closeMenu } = useDropdownMenuContext();
 
@@ -25,30 +44,37 @@ export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = props => {
     );
 
     const ownMouseEnter = (e: MouseEvent) => {
+        if (disabled) return;
         setBackgroundOpacity(theme.highlights.hover);
         onMouseEnter?.(e);
     };
 
     const ownMouseLeave = (e: MouseEvent) => {
+        if (disabled) return;
         setBackgroundOpacity(0);
         onMouseLeave?.(e);
     };
 
     const ownClick = (e: MouseEvent) => {
+        if (disabled) return;
+        onSelect?.();
         onClick?.(e);
         if (!noCloseBehavior) closeMenu();
     };
 
     const itemStyle: StyleProps = {
         ...style,
+        ...extractStyleProps(props, theme),
         padding: theme.spacing.sm,
         width: '100%',
         flexDirection: 'row',
         alignItems: 'center',
+        gap: theme.spacing.md,
         justifyContent: 'space-between',
         backgroundColor: `rgba(255, 255, 255, ${backgroundOpacity})`,
         borderRadius: theme.borders.radius.sm,
-        cursor: 'pointer'
+        cursor: 'pointer',
+        opacity: disabled ? 0.5 : 1
     };
 
     const childrenStyle: StyleProps = {
@@ -66,8 +92,12 @@ export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = props => {
         fontSize: '0.9em'
     };
 
+    let tipText: string | null = null;
+    if (tip) tipText = tip;
+    else if (hotkey) tipText = getHotkeyString(hotkey);
+
     return (
-        <Box style={itemStyle} onMouseEnter={ownMouseEnter} onMouseLeave={ownMouseLeave} onClick={ownClick} {...rest}>
+        <Flex style={itemStyle} onMouseEnter={ownMouseEnter} onMouseLeave={ownMouseLeave} onClick={ownClick} {...rest}>
             <Box style={prefixPostfixStyle}>{prefix}</Box>
             <Box style={childrenStyle}>{children}</Box>
             <Box
@@ -78,9 +108,9 @@ export const DropdownMenuItem: React.FC<DropdownMenuItemProps> = props => {
                     gap: theme.spacing.sm
                 }}
             >
-                {tip && <Box style={{ color: theme.colors.textSecondary, fontSize: '0.85em' }}>{tip}</Box>}
+                {tipText && <Box style={{ color: theme.colors.textSecondary, fontSize: '0.85em' }}>{tipText}</Box>}
                 <Box style={prefixPostfixStyle}>{suffix}</Box>
             </Box>
-        </Box>
+        </Flex>
     );
 };

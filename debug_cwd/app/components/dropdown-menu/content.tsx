@@ -1,10 +1,10 @@
 import * as React from 'mini-react';
-import { Box, BoxProps } from 'ui';
-import { Separator } from '../separator';
+import { Separator } from '@app/components/separator';
+import { Flex, FlexProps } from '@app/components/flex';
 import { Theme } from '@app/types';
 import { useTheme } from '@app/contexts';
 
-type DropdownMenuSeparatorProps = BoxProps & {
+type DropdownMenuSeparatorProps = FlexProps & {
     theme: Theme;
 };
 
@@ -12,7 +12,7 @@ const DropdownMenuSeparator: React.FC<DropdownMenuSeparatorProps> = props => {
     const { theme } = props;
 
     return (
-        <Box
+        <Flex
             style={{
                 width: '100%',
                 height: '1px',
@@ -24,7 +24,7 @@ const DropdownMenuSeparator: React.FC<DropdownMenuSeparatorProps> = props => {
     );
 };
 
-export const DropdownMenuContent: React.FC<Omit<BoxProps, 'ref'>> = props => {
+export const DropdownMenuContent: React.FC<Omit<FlexProps, 'ref'>> = props => {
     const theme = useTheme();
     const childrenArray = React.flattenChildren(props.children);
 

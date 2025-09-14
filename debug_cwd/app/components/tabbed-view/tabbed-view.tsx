@@ -1,7 +1,9 @@
 import * as React from 'mini-react';
-import { Box, BoxProps, StyleProps } from 'ui';
+import { StyleProps } from 'ui';
 
 import { useTheme } from '@app/contexts';
+import { Flex, FlexProps } from '@app/components/flex';
+import { Tab } from './tab';
 
 type TabInfo = {
     key: React.Key;
@@ -14,7 +16,7 @@ function getTabId(tab: TabInfo): React.Key {
     return tab.key ?? tab.label;
 }
 
-type TabViewProps = BoxProps & {
+type TabViewProps = FlexProps & {
     key?: React.Key;
     label: string;
     onClose?: () => void;
@@ -23,13 +25,13 @@ type TabViewProps = BoxProps & {
 export const TabView: React.FC<TabViewProps> = props => {
     const { style, children, label, onClose, ...rest } = props;
     return (
-        <Box style={style} {...rest}>
+        <Flex style={style} {...rest}>
             {children}
-        </Box>
+        </Flex>
     );
 };
 
-type TabbedViewProps = BoxProps & {};
+type TabbedViewProps = FlexProps & {};
 export const TabbedView: React.FC<TabbedViewProps> = props => {
     const { style, children, ...rest } = props;
     const theme = useTheme();
@@ -55,58 +57,32 @@ export const TabbedView: React.FC<TabbedViewProps> = props => {
     const [activeTabId, setActiveTabId] = React.useState<React.Key | null>(tabs.length > 0 ? getTabId(tabs[0]) : null);
     const activeTab = tabs.find(tab => getTabId(tab) === activeTabId);
 
+    React.useEffect(() => {
+        if (tabs.length === 0 || activeTab) return;
+        setActiveTabId(getTabId(tabs[0]));
+    }, [tabs, activeTab]);
+
     const mergedStyle: StyleProps = {
-        backgroundColor: theme.colors.surface,
-        padding: theme.spacing.sm,
-        borderBottomWidth: '1px',
-        borderBottomColor: theme.colors.border,
-        borderBottomStyle: 'solid',
         ...style,
         flexDirection: 'column'
     };
 
-    const tabStyle: StyleProps = {
-        color: theme.colors.text,
-        paddingLeft: theme.spacing.lg,
-        paddingRight: theme.spacing.lg,
-        borderTopLeftRadius: theme.borders.radius.sm,
-        borderTopRightRadius: theme.borders.radius.sm,
-        cursor: 'pointer'
-    };
-
     return (
-        <Box style={mergedStyle} {...rest}>
-            <Box
-                style={{
-                    width: '100%',
-                    flexShrink: 1,
-                    flexDirection: 'row',
-                    gap: theme.spacing.sm,
-                    backgroundColor: theme.colors.background
-                }}
-            >
+        <Flex style={mergedStyle} {...rest}>
+            <Flex w='100%' shrink={1} fd='row' gap='sm' bg={theme.colors.background}>
                 {tabs.map(tab => (
-                    <Box
+                    <Tab
                         key={tab.key}
-                        style={{
-                            ...tabStyle,
-                            backgroundColor: activeTab === tab ? theme.colors.surface : theme.colors.background
-                        }}
+                        isActive={activeTab === tab}
+                        label={tab.label}
+                        onClose={tab.onClose}
                         onClick={() => setActiveTabId(getTabId(tab))}
-                    >
-                        {tab.label}
-                    </Box>
+                    />
                 ))}
-            </Box>
-            <Box
-                style={{
-                    width: '100%',
-                    flexGrow: 1,
-                    backgroundColor: theme.colors.surface
-                }}
-            >
+            </Flex>
+            <Flex w='100%' bg={theme.colors.surface} grow={1}>
                 {activeTab?.node}
-            </Box>
-        </Box>
+            </Flex>
+        </Flex>
     );
 };
