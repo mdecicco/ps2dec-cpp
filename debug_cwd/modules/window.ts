@@ -26,6 +26,7 @@ export class Window extends EventProducer<WindowEvents> {
     private m_title: string;
     private m_borderEnabled: boolean;
     private m_cursorIcon: CursorIcon;
+    private m_cursorIconOverride: CursorIcon | null;
     private m_size: vec2;
     private m_position: vec2;
     private m_openListener: u32 | null;
@@ -50,6 +51,7 @@ export class Window extends EventProducer<WindowEvents> {
         this.m_title = '';
         this.m_borderEnabled = true;
         this.m_cursorIcon = CursorIcon.Default;
+        this.m_cursorIconOverride = null;
         this.m_size = new vec2(width ?? 200, height ?? 200);
         this.m_position = new vec2(0, 0);
         this.m_openListener = null;
@@ -231,14 +233,34 @@ export class Window extends EventProducer<WindowEvents> {
         this.m_clientWindow.setBorderEnabled(borderEnabled);
     }
 
+    set cursorOverride(icon: CursorIcon | null) {
+        const prevEffectiveCursor = this.effectiveCursor;
+        this.m_cursorIconOverride = icon;
+
+        const effectiveCursor = this.effectiveCursor;
+        if (effectiveCursor === prevEffectiveCursor) return;
+        this.m_clientWindow.setCursorIcon(effectiveCursor);
+    }
+
+    get cursorOverride() {
+        return this.m_cursorIconOverride;
+    }
+
     set cursor(icon: CursorIcon) {
-        if (this.m_cursorIcon === icon) return;
+        const prevEffectiveCursor = this.effectiveCursor;
         this.m_cursorIcon = icon;
-        this.m_clientWindow.setCursorIcon(icon);
+
+        const effectiveCursor = this.effectiveCursor;
+        if (effectiveCursor === prevEffectiveCursor) return;
+        this.m_clientWindow.setCursorIcon(effectiveCursor);
     }
 
     get cursor() {
         return this.m_cursorIcon;
+    }
+
+    get effectiveCursor() {
+        return this.m_cursorIconOverride || this.m_cursorIcon;
     }
 
     open() {
