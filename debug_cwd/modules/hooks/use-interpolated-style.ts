@@ -1,8 +1,8 @@
 import * as React from 'mini-react';
 import { px, StyleParser } from 'ui/utils';
+import { Color, SizeUnit } from 'ui/types';
 
 import { useInterpolatedState } from './use-interpolated-state';
-import { Color, SizeUnit } from 'ui/types';
 
 const unitStrings: Record<SizeUnit, string> = {
     [SizeUnit.em]: 'em',

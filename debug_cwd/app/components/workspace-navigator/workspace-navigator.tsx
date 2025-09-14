@@ -1,6 +1,6 @@
 import * as React from 'mini-react';
 import { FaChevronDown, FaChevronRight } from 'font-awesome-solid';
-import { MouseEvent, StyleProps } from 'ui/types';
+import { MouseEvent, StyleProps } from 'ui';
 import { EasingMode, useInterpolatedColor } from 'hooks';
 
 import { useTheme, useWorkspace } from '@app/contexts';

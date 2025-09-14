@@ -1,6 +1,5 @@
 import * as React from 'mini-react';
-import { StyleProps } from 'ui';
-import { MouseEvent } from 'ui/types';
+import { StyleProps, MouseEvent } from 'ui';
 import { EasingMode, useInterpolatedColor, useInterpolatedSize } from 'hooks';
 
 import { useTheme } from '@app/contexts';

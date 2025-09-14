@@ -2,8 +2,7 @@ import { useCurrentWindow } from 'components';
 import { EasingMode, useDepthLayer, useInjectRef, useInterpolatedNumber, useRootElement } from 'hooks';
 import { vec2 } from 'math-ext';
 import * as React from 'mini-react';
-import { Box, BoxProps, Element, StyleProps } from 'ui';
-import { ClientRect, Direction } from 'ui/types';
+import { Box, BoxProps, Element, StyleProps, ClientRect, Direction } from 'ui';
 import { StyleParser } from 'ui/utils';
 
 import { useTheme } from '@app/contexts';
