@@ -2,7 +2,7 @@ import * as React from 'mini-react';
 import { Box } from 'ui';
 
 import { WindowComponent } from '@app/windows/types';
-import { Background, Pane, WorkspaceNavigator } from '@app/components';
+import { Background, WorkspaceNavigator } from '@app/components';
 import { MainToolbar } from './MainToolbar';
 
 export const MainWindow: WindowComponent = () => {
