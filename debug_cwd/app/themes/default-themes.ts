@@ -4,11 +4,11 @@ import { Theme } from '@app/types';
 const baseTokens = {
     typography: {
         size: {
-            xs: '0.8rem',
-            sm: '1.0rem',
-            md: '1.1rem',
-            lg: '1.4rem',
-            xl: '2.0rem'
+            xs: '0.6rem',
+            sm: '0.8rem',
+            md: '1.0rem',
+            lg: '1.2rem',
+            xl: '1.4rem'
         }
     },
     spacing: {
@@ -47,18 +47,24 @@ export const darkTheme: Theme = {
         secondary: 'rgb(95, 70, 50)',
         accent: 'rgb(202, 115, 34)',
 
-        // Neutral colors
-        background: 'rgb(24, 18, 7)',
-        surface: 'rgb(70, 48, 31)',
+        background: 'rgb(49, 49, 54)',
+        surface: 'rgb(53, 60, 73)',
         text: 'rgb(214, 214, 214)',
         textSecondary: 'rgb(145, 145, 145)',
-        border: 'rgba(255, 255, 255, 0.38)',
+        border: 'rgba(255, 255, 255, 0.63)',
 
         // State colors
         success: 'rgb(90, 187, 106)',
         warning: 'rgb(168, 185, 90)',
         error: 'rgb(189, 90, 90)',
-        info: 'rgb(96, 187, 194)'
+        info: 'rgb(96, 187, 194)',
+
+        darkest: 'rgba(0, 0, 0, 0.5)',
+        darker: 'rgba(0, 0, 0, 0.3)',
+        dark: 'rgba(0, 0, 0, 0.1)',
+        light: 'rgba(255, 255, 255, 0.1)',
+        lighter: 'rgba(255, 255, 255, 0.3)',
+        lightest: 'rgba(255, 255, 255, 0.5)'
     },
     durations: {
         short: 125,

@@ -13,6 +13,13 @@ export type ColorPalette = {
     warning: string;
     error: string;
     info: string;
+
+    darkest: string;
+    darker: string;
+    dark: string;
+    light: string;
+    lighter: string;
+    lightest: string;
 };
 
 export type TypographyScale = {
