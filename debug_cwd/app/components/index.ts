@@ -6,5 +6,6 @@ export * from './dropdown-menu';
 export * from './separator';
 export * from './icon';
 export * from './tabbed-view';
+export * from './close-button';
 export * from './pane';
 export * from './flex';
