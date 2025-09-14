@@ -1,14 +1,14 @@
 import { TreeNode } from './vdom';
 import { HookType } from './hook';
-import { Ref } from './types';
+import { RefObject } from './types';
 
-function makeRefData<T>(value: T): Ref<T> {
+function makeRefData<T>(value: T): RefObject<T> {
     return {
         current: value
     };
 }
 
-export function useRef<T>(initialValue: T): Ref<T> {
+export function useRef<T>(initialValue: T): RefObject<T> {
     const currentNode = TreeNode.current;
     if (!currentNode) throw new Error('useState can only be called inside a component');
 

@@ -45,6 +45,10 @@ export function isSpecificElement<PropsType>(
     return type === compareTo;
 }
 
-export type Ref<T> = {
+export type RefObject<T> = {
     current: T;
 };
+
+export type RefCallback<T> = (instance: T) => void;
+
+export type Ref<T> = RefObject<T> | RefCallback<T>;
