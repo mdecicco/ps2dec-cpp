@@ -183,6 +183,9 @@ namespace decomp {
 
     void bindWindowType(bind::Namespace* ns) {
         bind::ObjectTypeBuilder<Window> window = ns->type<Window>("ClientWindow");
+
+        window.baseType<IWithLogging>();
+
         tspp::describe(window.ctor()).desc("Creates a new window with default settings");
 
         tspp::describe(window.ctor<const utils::String&>())
@@ -278,6 +281,64 @@ namespace decomp {
         tspp::describe(window.staticMethod("getMonitors", &Window::getMonitors))
             .desc("Gets all the monitors connected to the system")
             .returns("An array of MonitorInfo objects");
+
+        tspp::describe(window.staticMethod("showConfirmationDialog", &Window::showConfirmationDialog))
+            .desc("Shows a confirmation dialog")
+            .param(0, "title", "The title of the dialog")
+            .param(1, "message", "The message of the dialog")
+            .param(2, "parent", "The parent window of the dialog", true)
+            .returns("true if the user clicked OK, false otherwise")
+            .async();
+
+        tspp::describe(window.staticMethod("showErrorDialog", &Window::showErrorDialog))
+            .desc("Shows an error dialog")
+            .param(0, "title", "The title of the dialog")
+            .param(1, "message", "The message of the dialog")
+            .param(2, "parent", "The parent window of the dialog", true)
+            .async();
+
+        tspp::describe(window.staticMethod("showWarningDialog", &Window::showWarningDialog))
+            .desc("Shows a warning dialog")
+            .param(0, "title", "The title of the dialog")
+            .param(1, "message", "The message of the dialog")
+            .param(2, "parent", "The parent window of the dialog", true)
+            .async();
+
+        tspp::describe(window.staticMethod("showMessageDialog", &Window::showMessageDialog))
+            .desc("Shows a message dialog")
+            .param(0, "title", "The title of the dialog")
+            .param(1, "message", "The message of the dialog")
+            .param(2, "parent", "The parent window of the dialog", true)
+            .async();
+
+        tspp::describe(window.staticMethod("showOpenDirectoryDialog", &Window::showOpenDirectoryDialog))
+            .desc("Shows an open directory dialog")
+            .param(0, "title", "The title of the dialog")
+            .param(1, "defaultPath", "The default path of the dialog", true)
+            .param(2, "parent", "The parent window of the dialog", true)
+            .returns("The path of the selected directory", false)
+            .async();
+
+        tspp::describe(window.staticMethod("showOpenFileDialog", &Window::showOpenFileDialog))
+            .desc("Shows an open file dialog")
+            .param(0, "title", "The title of the dialog")
+            .param(1, "allowedExtensionNames", "The names of each of the allowed extensions")
+            .param(2, "allowedExtensions", "The allowed extensions of the dialog")
+            .param(3, "maxFileCount", "The maximum number of files that can be selected")
+            .param(4, "defaultPath", "The default path of the dialog", true)
+            .param(5, "parent", "The parent window of the dialog", true)
+            .returns("The paths of the selected files", false)
+            .async();
+
+        tspp::describe(window.staticMethod("showSaveFileDialog", &Window::showSaveFileDialog))
+            .desc("Shows a save file dialog")
+            .param(0, "title", "The title of the dialog")
+            .param(1, "allowedExtensionNames", "The names of each of the allowed extensions")
+            .param(2, "allowedExtensions", "The allowed extensions of the dialog")
+            .param(3, "defaultPath", "The default path of the dialog", true)
+            .param(4, "parent", "The parent window of the dialog", true)
+            .returns("The path of the selected file", false)
+            .async();
 
         //
         // Event listeners

@@ -5,10 +5,9 @@
 
 #include <decomp/app/input.h>
 
-#include <render/IWithRendering.h>
-
 #include <utils/Array.h>
 #include <utils/String.h>
+#include <utils/interfaces/IWithLogging.h>
 
 namespace decomp {
     enum class CursorIcon {
@@ -40,7 +39,7 @@ namespace decomp {
 
     class Window_Impl;
     class Application;
-    class Window : public render::IWithRendering {
+    class Window : public IWithLogging {
         public:
             Window();
             Window(const utils::String& title);
@@ -51,17 +50,6 @@ namespace decomp {
             Window(Window* parent, u32 width, u32 height);
             Window(Window* parent, const utils::String& title, u32 width, u32 height);
             ~Window();
-
-            virtual const render::vulkan::PhysicalDevice* choosePhysicalDevice(
-                const Array<render::vulkan::PhysicalDevice>& devices
-            );
-            virtual bool setupInstance(render::vulkan::Instance* instance) override;
-            virtual bool setupDevice(render::vulkan::LogicalDevice* device) override;
-            virtual bool setupSwapchain(
-                render::vulkan::SwapChain* swapChain,
-                const render::vulkan::SwapChainSupport& support,
-                u32 sampleCount = 1
-            ) override;
 
             bool setOpen(bool open);
             bool setCursorIcon(CursorIcon icon);
@@ -83,6 +71,36 @@ namespace decomp {
             void unsubscribeInputHandler(IInputHandler* handler);
 
             static utils::Array<MonitorInfo> getMonitors();
+            static bool showConfirmationDialog(
+                const utils::String& title, const utils::String& message, Window* parent = nullptr
+            );
+            static void showErrorDialog(
+                const utils::String& title, const utils::String& message, Window* parent = nullptr
+            );
+            static void showWarningDialog(
+                const utils::String& title, const utils::String& message, Window* parent = nullptr
+            );
+            static void showMessageDialog(
+                const utils::String& title, const utils::String& message, Window* parent = nullptr
+            );
+            static String showOpenDirectoryDialog(
+                const String& title, const String* defaultPath = nullptr, Window* parent = nullptr
+            );
+            static Array<String> showOpenFileDialog(
+                const String& title,
+                const Array<String>& allowedExtensionNames = {},
+                const Array<String>& allowedExtensions     = {},
+                u32 maxFileCount                           = 1,
+                const String* defaultPath                  = nullptr,
+                Window* parent                             = nullptr
+            );
+            static String showSaveFileDialog(
+                const String& title,
+                const Array<String>& allowedExtensionNames = {},
+                const Array<String>& allowedExtensions     = {},
+                const String* defaultPath                  = nullptr,
+                Window* parent                             = nullptr
+            );
 
             Event<void> onOpen;
             Event<void> onClose;

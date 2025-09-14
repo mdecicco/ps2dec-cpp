@@ -5,19 +5,13 @@
 #include <utils/Array.hpp>
 #include <utils/String.h>
 
-#include <render/core/FrameContext.h>
-#include <render/vulkan/CommandBuffer.h>
-#include <render/vulkan/Instance.h>
-#include <render/vulkan/LogicalDevice.h>
-#include <render/vulkan/PhysicalDevice.h>
-#include <render/vulkan/SwapChain.h>
-#include <render/vulkan/SwapChainSupport.h>
-
 #include <utils/Array.hpp>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <Windowsx.h>
+#include <commdlg.h>
+#include <shlobj.h>
 
 namespace decomp {
     class Window_Impl {
@@ -215,7 +209,6 @@ namespace decomp {
                                     self->m_width  = width;
                                     self->m_height = height;
 
-                                    self->onWindowResize(self, width, height);
                                     self->m_onResize.dispatch(self->onResize, width, height);
                                 }
                             }
@@ -336,7 +329,7 @@ namespace decomp {
             }
     };
 
-    Window::Window() {
+    Window::Window() : IWithLogging("Window") {
         m_application = nullptr;
         m_parent      = nullptr;
         m_handle      = nullptr;
@@ -367,7 +360,7 @@ namespace decomp {
         m_scope = m_title;
     }
 
-    Window::Window(const utils::String& title) {
+    Window::Window(const utils::String& title) : IWithLogging("Window") {
         m_application = nullptr;
         m_parent      = nullptr;
         m_handle      = nullptr;
@@ -395,7 +388,7 @@ namespace decomp {
         m_scope = m_title;
     }
 
-    Window::Window(u32 width, u32 height) {
+    Window::Window(u32 width, u32 height) : IWithLogging("Window") {
         m_application = nullptr;
         m_parent      = nullptr;
         m_handle      = nullptr;
@@ -424,7 +417,7 @@ namespace decomp {
         m_scope = m_title;
     }
 
-    Window::Window(const utils::String& title, u32 width, u32 height) {
+    Window::Window(const utils::String& title, u32 width, u32 height) : IWithLogging("Window") {
         m_application = nullptr;
         m_parent      = nullptr;
         m_handle      = nullptr;
@@ -453,7 +446,7 @@ namespace decomp {
         m_scope = m_title;
     }
 
-    Window::Window(Window* parent) {
+    Window::Window(Window* parent) : IWithLogging("Window") {
         m_application = nullptr;
         m_parent      = parent;
         m_handle      = nullptr;
@@ -481,7 +474,7 @@ namespace decomp {
         m_scope = m_title;
     }
 
-    Window::Window(Window* parent, const utils::String& title) {
+    Window::Window(Window* parent, const utils::String& title) : IWithLogging("Window") {
         m_application = nullptr;
         m_parent      = parent;
         m_handle      = nullptr;
@@ -509,7 +502,7 @@ namespace decomp {
         m_scope = m_title;
     }
 
-    Window::Window(Window* parent, u32 width, u32 height) {
+    Window::Window(Window* parent, u32 width, u32 height) : IWithLogging("Window") {
         m_application = nullptr;
         m_parent      = parent;
         m_handle      = nullptr;
@@ -538,7 +531,7 @@ namespace decomp {
         m_scope = m_title;
     }
 
-    Window::Window(Window* parent, const utils::String& title, u32 width, u32 height) {
+    Window::Window(Window* parent, const utils::String& title, u32 width, u32 height) : IWithLogging("Window") {
         m_application = nullptr;
         m_parent      = parent;
         m_handle      = nullptr;
@@ -575,74 +568,6 @@ namespace decomp {
         if (m_handle) {
             closeHandle();
         }
-    }
-
-    const render::vulkan::PhysicalDevice* Window::choosePhysicalDevice(
-        const Array<render::vulkan::PhysicalDevice>& devices
-    ) {
-        const render::vulkan::PhysicalDevice* gpu = nullptr;
-        render::vulkan::SwapChainSupport swapChainSupport;
-
-        for (render::u32 i = 0; i < devices.size() && !gpu; i++) {
-            if (!devices[i].isDiscrete()) {
-                continue;
-            }
-            if (!devices[i].isExtensionAvailable(VK_KHR_SWAPCHAIN_EXTENSION_NAME)) {
-                continue;
-            }
-
-            if (!devices[i].getSurfaceSwapChainSupport(getSurface(), &swapChainSupport)) {
-                continue;
-            }
-            if (!swapChainSupport.isValid()) {
-                continue;
-            }
-
-            if (!swapChainSupport.hasFormat(VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)) {
-                continue;
-            }
-            if (!swapChainSupport.hasPresentMode(VK_PRESENT_MODE_FIFO_KHR)) {
-                continue;
-            }
-
-            auto& capabilities = swapChainSupport.getCapabilities();
-            if (capabilities.maxImageCount > 0 && capabilities.maxImageCount < 3) {
-                continue;
-            }
-
-            gpu = &devices[i];
-        }
-
-        return gpu;
-    }
-
-    bool Window::setupInstance(render::vulkan::Instance* instance) {
-        instance->enableValidation();
-        addNestedLogger(instance);
-
-        return true;
-    }
-
-    bool Window::setupDevice(render::vulkan::LogicalDevice* device) {
-        return device->init(true, true, false, getSurface());
-    }
-
-    bool Window::setupSwapchain(
-        render::vulkan::SwapChain* swapChain, const render::vulkan::SwapChainSupport& support, u32 sampleCount
-    ) {
-        return swapChain->init(
-            getSurface(),
-            getLogicalDevice(),
-            support,
-            VK_FORMAT_A2B10G10R10_UNORM_PACK32,
-            VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-            VK_PRESENT_MODE_FIFO_KHR,
-            3,
-            sampleCount,
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-            VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-            nullptr
-        );
     }
 
     bool Window::setOpen(bool open) {
@@ -890,6 +815,243 @@ namespace decomp {
         return out;
     }
 
+    bool Window::showConfirmationDialog(const utils::String& title, const utils::String& message, Window* parent) {
+        HWND parentHandle = parent ? (HWND)parent->m_handle : nullptr;
+        return MessageBox(parentHandle, message.c_str(), title.c_str(), MB_OKCANCEL) == IDOK;
+    }
+
+    void Window::showErrorDialog(const utils::String& title, const utils::String& message, Window* parent) {
+        HWND parentHandle = parent ? (HWND)parent->m_handle : nullptr;
+        MessageBox(parentHandle, message.c_str(), title.c_str(), MB_OK | MB_ICONERROR);
+    }
+
+    void Window::showWarningDialog(const utils::String& title, const utils::String& message, Window* parent) {
+        HWND parentHandle = parent ? (HWND)parent->m_handle : nullptr;
+        MessageBox(parentHandle, message.c_str(), title.c_str(), MB_OK | MB_ICONWARNING);
+    }
+
+    void Window::showMessageDialog(const utils::String& title, const utils::String& message, Window* parent) {
+        HWND parentHandle = parent ? (HWND)parent->m_handle : nullptr;
+        MessageBox(parentHandle, message.c_str(), title.c_str(), MB_OK | MB_ICONINFORMATION);
+    }
+
+    String Window::showOpenDirectoryDialog(const String& title, const String* defaultPath, Window* parent) {
+        HWND parentHandle = parent ? (HWND)parent->m_handle : nullptr;
+
+        HRESULT hr;
+
+        hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        if (FAILED(hr)) {
+            throw GenericException("Failed to initialize COM");
+        }
+
+        IFileOpenDialog* dialog;
+        hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&dialog));
+        if (FAILED(hr)) {
+            CoUninitialize();
+            throw GenericException("Failed to create file open dialog");
+        }
+
+        DWORD options;
+        hr = dialog->GetOptions(&options);
+        if (FAILED(hr)) {
+            CoUninitialize();
+            throw GenericException("Failed to get file open dialog options");
+        }
+
+        hr = dialog->SetOptions(options | FOS_PICKFOLDERS);
+        if (FAILED(hr)) {
+            CoUninitialize();
+            throw GenericException("Failed to set file open dialog options");
+        }
+
+        hr = dialog->Show(parentHandle);
+        if (FAILED(hr)) {
+            CoUninitialize();
+            throw GenericException("Failed to show file open dialog");
+        }
+
+        IShellItem* item;
+        hr = dialog->GetResult(&item);
+        if (FAILED(hr)) {
+            CoUninitialize();
+            throw GenericException("Failed to get file open dialog result");
+        }
+
+        PWSTR path;
+        hr = item->GetDisplayName(SIGDN_FILESYSPATH, &path);
+        if (FAILED(hr)) {
+            item->Release();
+            CoUninitialize();
+            throw GenericException("Failed to get file open dialog result");
+        }
+
+        char* result = new char[wcslen(path) + 1];
+        wcstombs(result, path, wcslen(path) + 1);
+        CoTaskMemFree(path);
+
+        item->Release();
+        dialog->Release();
+        CoUninitialize();
+
+        String resultStr = result;
+        delete[] result;
+
+        for (u32 i = 0; i < resultStr.size(); i++) {
+            if (resultStr[i] == '\\') {
+                resultStr[i] = '/';
+            }
+        }
+
+        return resultStr;
+    }
+
+    Array<String> Window::showOpenFileDialog(
+        const String& title,
+        const Array<String>& allowedExtensionNames,
+        const Array<String>& allowedExtensions,
+        u32 maxFileCount,
+        const String* defaultPath,
+        Window* parent
+    ) {
+        if (allowedExtensionNames.size() != allowedExtensions.size()) {
+            throw InvalidArgumentException("Allowed extension names and extensions must have the same size");
+        }
+
+        String filter = "";
+        for (u32 i = 0; i < allowedExtensions.size(); i++) {
+            filter += allowedExtensionNames[i];
+            filter += '\0';
+            filter += allowedExtensions[i];
+            filter += '\0';
+        }
+        filter += '\0';
+        filter += '\0';
+
+        char* results = new char[(MAX_PATH + 1) * maxFileCount];
+        memset(results, 0, (MAX_PATH + 1) * maxFileCount);
+
+        OPENFILENAME ofn;
+        memset(&ofn, 0, sizeof(OPENFILENAME));
+
+        ofn.lStructSize     = sizeof(OPENFILENAME);
+        ofn.hwndOwner       = parent ? (HWND)parent->m_handle : nullptr;
+        ofn.lpstrTitle      = title.c_str();
+        ofn.lpstrFilter     = filter.c_str();
+        ofn.lpstrFile       = results;
+        ofn.lpstrInitialDir = defaultPath ? defaultPath->c_str() : nullptr;
+        ofn.nMaxFile        = MAX_PATH * maxFileCount;
+
+        u32 flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+        if (maxFileCount > 1) {
+            flags |= OFN_ALLOWMULTISELECT;
+        }
+
+        ofn.Flags = flags;
+
+        if (GetOpenFileName(&ofn)) {
+            Array<String> out;
+
+            String dir = results;
+            if (dir.size() == 0) {
+                delete[] results;
+                return out;
+            }
+
+            for (u32 i = 0; i < dir.size(); i++) {
+                if (dir[i] == '\\') {
+                    dir[i] = '/';
+                }
+            }
+
+            if (maxFileCount == 1) {
+                out.push(dir);
+                delete[] results;
+                return out;
+            }
+
+            char* ptr = results + dir.size() + 1;
+            while (*ptr) {
+                if (out.size() > maxFileCount) {
+                    delete[] results;
+                    throw RangeException("Max file count exceeded by user selection");
+                }
+
+                String file     = ptr;
+                String fullPath = dir + "/" + file;
+
+                out.push(fullPath);
+                ptr += file.size() + 1;
+            }
+
+            delete[] results;
+
+            return out;
+        }
+
+        delete[] results;
+        return Array<String>();
+    }
+
+    String Window::showSaveFileDialog(
+        const String& title,
+        const Array<String>& allowedExtensionNames,
+        const Array<String>& allowedExtensions,
+        const String* defaultPath,
+        Window* parent
+    ) {
+        if (allowedExtensionNames.size() != allowedExtensions.size()) {
+            throw InvalidArgumentException("Allowed extension names and extensions must have the same size");
+        }
+
+        String filter = "";
+        for (u32 i = 0; i < allowedExtensions.size(); i++) {
+            filter += allowedExtensionNames[i];
+            filter += '\0';
+            filter += allowedExtensions[i];
+            filter += '\0';
+        }
+        filter += '\0';
+        filter += '\0';
+
+        char results[MAX_PATH + 1];
+        memset(results, 0, MAX_PATH + 1);
+
+        OPENFILENAME ofn;
+        memset(&ofn, 0, sizeof(OPENFILENAME));
+
+        ofn.lStructSize     = sizeof(OPENFILENAME);
+        ofn.hwndOwner       = parent ? (HWND)parent->m_handle : nullptr;
+        ofn.lpstrTitle      = title.c_str();
+        ofn.lpstrFilter     = filter.c_str();
+        ofn.lpstrFile       = results;
+        ofn.lpstrInitialDir = defaultPath ? defaultPath->c_str() : nullptr;
+        ofn.nMaxFile        = MAX_PATH;
+
+        u32 flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+
+        ofn.Flags = flags;
+
+        if (GetOpenFileName(&ofn)) {
+            String file = results;
+            if (file.size() == 0) {
+                return "";
+            }
+
+            for (u32 i = 0; i < file.size(); i++) {
+                if (file[i] == '\\') {
+                    file[i] = '/';
+                }
+            }
+
+            delete[] results;
+            return file;
+        }
+
+        delete[] results;
+        return "";
+    }
+
     bool Window::openHandle() {
         if (m_handle) {
             return true;
@@ -993,7 +1155,6 @@ namespace decomp {
             return true;
         }
 
-        shutdownRendering();
         return DestroyWindow((HWND)m_handle) == TRUE;
     }
 }
