@@ -1,0 +1,40 @@
+import { StyleProps } from 'ui';
+
+type TypographyScale = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+type SizeScale = 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+
+export type ShorthandStyleProps = {
+    c?: StyleProps['color'];
+    w?: StyleProps['width'];
+    h?: StyleProps['height'];
+    minw?: StyleProps['minWidth'];
+    maxw?: StyleProps['maxWidth'];
+    minh?: StyleProps['minHeight'];
+    maxh?: StyleProps['maxHeight'];
+    bg?: StyleProps['backgroundColor'];
+    grow?: StyleProps['flexGrow'];
+    shrink?: StyleProps['flexShrink'];
+    ff?: StyleProps['fontFamily'];
+    ta?: StyleProps['textAlign'];
+    fd?: StyleProps['flexDirection'];
+    jc?: StyleProps['justifyContent'];
+    ai?: StyleProps['alignItems'];
+    lh?: SizeScale;
+    p?: SizeScale;
+    pl?: SizeScale;
+    pr?: SizeScale;
+    pt?: SizeScale;
+    pb?: SizeScale;
+    m?: SizeScale;
+    ml?: SizeScale;
+    mr?: SizeScale;
+    mt?: SizeScale;
+    mb?: SizeScale;
+    gap?: SizeScale;
+    fs?: TypographyScale;
+    b?: StyleProps['border'];
+    bl?: StyleProps['borderLeft'];
+    br?: StyleProps['borderRight'];
+    bt?: StyleProps['borderTop'];
+    bb?: StyleProps['borderBottom'];
+};
